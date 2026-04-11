@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Orders\CreateOrderAction;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Order;
@@ -28,10 +29,11 @@ class OrderController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreOrderRequest $request)
+    public function store(StoreOrderRequest $request , CreateOrderAction $createOrderAction)
     {
-        Log::info($request);
-        return response()->json('success',200);
+        $createOrderAction->handle($request->validated());
+
+        return 'Ok';
     }
 
     /**
