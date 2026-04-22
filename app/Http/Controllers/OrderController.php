@@ -6,6 +6,7 @@ use App\Actions\Orders\CreateOrderAction;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Order;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
@@ -29,11 +30,12 @@ class OrderController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreOrderRequest $request , CreateOrderAction $createOrderAction)
+    public function store(Request $request , CreateOrderAction $createOrderAction)
+    
     {
-        $createOrderAction->handle($request->validated());
+        Log::info($request);
+        return $createOrderAction->handle($request->all());
 
-        return 'Ok';
     }
 
     /**

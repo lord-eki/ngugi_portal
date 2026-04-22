@@ -5,29 +5,29 @@ import type { OrderData, DeliveryData, PaymentData } from './Wizard';
 type PaymentMethod = 'mpesa-stk' | 'mpesa-till' | 'card';
 
 interface Props {
-    orderData:    OrderData;
+    orderData: OrderData;
     deliveryData: DeliveryData;
-    onNext:       (data: PaymentData) => void;
-    onBack:       () => void;
+    onNext: (data: PaymentData) => void;
+    onBack: () => void;
 }
 
 function SectionCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return <div className={`bg-white rounded-2xl border border-[#D4E8F5] p-5 ${className}`}>{children}</div>;
 }
 
-const TILL_NUMBER = '123456'; 
+const TILL_NUMBER = '123456';
 
 export default function StepPayment({ orderData, deliveryData, onNext, onBack }: Props) {
-    const [method,          setMethod]          = useState<PaymentMethod>('mpesa-stk');
-    const [phone,           setPhone]           = useState('');
-    const [tillCode,        setTillCode]        = useState('');
+    const [method, setMethod] = useState<PaymentMethod>('mpesa-stk');
+    const [phone, setPhone] = useState('');
+    const [tillCode, setTillCode] = useState('');
     const [transactionCode, setTransactionCode] = useState('');
-    const [cardNumber,      setCardNumber]      = useState('');
-    const [cardExpiry,      setCardExpiry]      = useState('');
-    const [cardCvv,         setCardCvv]         = useState('');
-    const [stkStatus,       setStkStatus]       = useState<'idle' | 'waiting' | 'success' | 'failed'>('idle');
-    const [submitting,      setSubmitting]       = useState(false);
-    const [error,           setError]           = useState('');
+    const [cardNumber, setCardNumber] = useState('');
+    const [cardExpiry, setCardExpiry] = useState('');
+    const [cardCvv, setCardCvv] = useState('');
+    const [stkStatus, setStkStatus] = useState<'idle' | 'waiting' | 'success' | 'failed'>('idle');
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState('');
 
     const total = orderData.grandTotal;
 
@@ -35,23 +35,23 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
         // Order details
         order: {
             selectedTypes: orderData.selectedTypes,
-            refillSizes:   orderData.refillSizes,
-            newSizes:      orderData.newSizes,
+            refillSizes: orderData.refillSizes,
+            newSizes: orderData.newSizes,
             deliverySpeed: orderData.deliverySpeed,
-            lineItems:     orderData.lineItems,
-            grandTotal:    orderData.grandTotal,
+            lineItems: orderData.lineItems,
+            grandTotal: orderData.grandTotal,
         },
         // Delivery details
         delivery: {
-            locationMode:   deliveryData.locationMode,
-            pinLocation:    deliveryData.pinLocation,
-            pinAddress:     deliveryData.pinAddress,
-            manualAddress:  deliveryData.manualAddress,
-            recipientName:  deliveryData.recipientName,
+            locationMode: deliveryData.locationMode,
+            pinLocation: deliveryData.pinLocation,
+            pinAddress: deliveryData.pinAddress,
+            manualAddress: deliveryData.manualAddress,
+            recipientName: deliveryData.recipientName,
             recipientPhone: deliveryData.recipientPhone,
-            scheduleType:   deliveryData.scheduleType,
-            scheduledTime:  deliveryData.scheduledTime,
-            notes:          deliveryData.notes,
+            scheduleType: deliveryData.scheduleType,
+            scheduledTime: deliveryData.scheduledTime,
+            notes: deliveryData.notes,
         },
         // Payment details
         payment: paymentData,
@@ -65,6 +65,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
 
         try {
             const paymentData: PaymentData = { method: 'mpesa-stk', phone, tillCode: '', transactionCode: '', cardNumber: '', cardExpiry: '', cardCvv: '' };
+
             await axios.post('/order', buildPayload(paymentData));
             setStkStatus('success');
             setTimeout(() => { onNext(paymentData); }, 1500);
@@ -84,7 +85,10 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
 
         try {
             const paymentData: PaymentData = { method: 'mpesa-till', phone: '', tillCode, transactionCode, cardNumber: '', cardExpiry: '', cardCvv: '' };
-            await axios.post('/order', buildPayload(paymentData));
+
+            let res = await axios.post('/order', buildPayload(paymentData));
+            console.log(res);
+
             onNext(paymentData);
         } catch (e: any) {
             setError(e?.response?.data?.message || 'Submission failed. Please try again.');
@@ -143,16 +147,15 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
 
                 <div className="space-y-2">
                     {([
-                        { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push',    sub: 'You\'ll get a prompt on your phone',      badge: 'Recommended' },
-                        { id: 'mpesa-till' as const, label: 'M-Pesa Till Number', sub: 'Pay manually via M-Pesa menu',           badge: null },
-                        { id: 'card' as const,       label: 'Visa / Mastercard',  sub: 'Secure card payment via Flutterwave',    badge: null },
+                        { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push', sub: 'You\'ll get a prompt on your phone', badge: 'Recommended' },
+                        { id: 'mpesa-till' as const, label: 'M-Pesa Till Number', sub: 'Pay manually via M-Pesa menu', badge: null },
+                        { id: 'card' as const, label: 'Visa / Mastercard', sub: 'Secure card payment via Flutterwave', badge: null },
                     ] as const).map(opt => {
                         const active = method === opt.id;
                         return (
                             <button key={opt.id} type="button" onClick={() => { setMethod(opt.id); setError(''); setStkStatus('idle'); }}
-                                className={`w-full flex items-start justify-between rounded-xl border-2 px-4 py-3.5 text-left transition-all ${
-                                    active ? 'border-[#1A4A7A] bg-[#EEF6FF]' : 'border-[#D4E8F5] bg-[#F9FBFD] hover:border-[#9ECBE8]'
-                                }`}>
+                                className={`w-full flex items-start justify-between rounded-xl border-2 px-4 py-3.5 text-left transition-all ${active ? 'border-[#1A4A7A] bg-[#EEF6FF]' : 'border-[#D4E8F5] bg-[#F9FBFD] hover:border-[#9ECBE8]'
+                                    }`}>
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <span className={`text-sm font-semibold ${active ? 'text-[#1A4A7A]' : 'text-[#0D2A47]'}`}>{opt.label}</span>
@@ -161,7 +164,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                                     <div className="text-xs text-[#6A8AA8] mt-0.5">{opt.sub}</div>
                                 </div>
                                 <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${active ? 'border-[#1A4A7A] bg-[#1A4A7A]' : 'border-[#C4DDEF] bg-white'}`}>
-                                    {active && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l1.8 1.8L6.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                    {active && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l1.8 1.8L6.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                 </div>
                             </button>
                         );
@@ -184,8 +187,8 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                     {stkStatus === 'waiting' && (
                         <div className="bg-[#FFF8E8] border border-[#F5D78A] rounded-xl p-4 flex items-start gap-3 mb-4">
                             <svg className="animate-spin w-5 h-5 text-[#B07A10] flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/>
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
                             </svg>
                             <div>
                                 <p className="text-sm font-semibold text-[#7A5A10]">Waiting for payment…</p>
@@ -195,7 +198,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                     )}
                     {stkStatus === 'success' && (
                         <div className="bg-[#E8F5E8] border border-[#9AD49A] rounded-xl p-4 flex items-center gap-3 mb-4">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#3A7A3A"/><path d="M6 10l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#3A7A3A" /><path d="M6 10l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                             <p className="text-sm font-semibold text-[#2A5A2A]">Payment received ✓</p>
                         </div>
                     )}
@@ -209,7 +212,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                     {stkStatus === 'idle' || stkStatus === 'failed' ? (
                         <button type="button" onClick={handleStkPush} disabled={submitting || phone.length < 9}
                             className="w-full py-3.5 rounded-xl bg-[#1A4A7A] text-white font-semibold hover:bg-[#0D2A47] transition-all shadow-lg shadow-[#1A4A7A]/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                            {submitting ? <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg> : null}
+                            {submitting ? <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg> : null}
                             Pay KES {total.toLocaleString()} via M-Pesa
                         </button>
                     ) : null}
@@ -245,7 +248,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                     />
                     <button type="button" onClick={handleTillSubmit} disabled={submitting || !transactionCode.trim()}
                         className="w-full py-3.5 rounded-xl bg-[#1A4A7A] text-white font-semibold hover:bg-[#0D2A47] transition-all shadow-lg shadow-[#1A4A7A]/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        {submitting && <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>}
+                        {submitting && <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg>}
                         I have paid — confirm order
                     </button>
                 </SectionCard>
@@ -278,12 +281,12 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                             </div>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-[#8AA8C0]">
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="7" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="7" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4" /><path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
                             Secured by Flutterwave. Your card details are never stored.
                         </div>
                         <button type="button" onClick={handleCardSubmit} disabled={submitting || !cardNumber || !cardExpiry || !cardCvv}
                             className="w-full py-3.5 rounded-xl bg-[#1A4A7A] text-white font-semibold hover:bg-[#0D2A47] transition-all shadow-lg shadow-[#1A4A7A]/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                            {submitting && <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>}
+                            {submitting && <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg>}
                             Pay KES {total.toLocaleString()}
                         </button>
                     </div>

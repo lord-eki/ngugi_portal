@@ -8,6 +8,7 @@ use App\Models\OrderCharge;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class CreateOrderAction
@@ -71,10 +72,10 @@ class CreateOrderAction
             // delvery info
             Delivery::create([
                 'order_id' => $order->id,
-                'location_mode' => $data['delivery']['location_mode'],
+                'location_mode' => $data['delivery']['locationMode'],
                 'manual_address' => $data['delivery']['pinAddress'],
-                'recepient_name' => $data['delivery']['recepientName'],
-                'recepient_phone' => $data['delivery']['recepientPhone'],
+                'recepient_name' => $data['delivery']['recipientName'],
+                'recepient_phone' => $data['delivery']['recipientPhone'],
                 'schedule_type' => $data['delivery']['scheduleType'],
                 'scheduled_time' => $data['delivery']['scheduledTime'],
                 'notes' => $data['delivery']['notes'],
@@ -101,7 +102,8 @@ class CreateOrderAction
             ], 201);
 
         } catch (Throwable $e) {
-            DB::rollback();
+
+            Log::error($e);
 
             return response()->json([
                 'message' => 'Failed to create order',

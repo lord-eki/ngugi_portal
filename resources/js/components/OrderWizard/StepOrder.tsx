@@ -43,7 +43,6 @@ function SectionCard({ children, className = '' }: { children: React.ReactNode; 
     return <div className={`bg-white rounded-2xl border border-[#D4E8F5] p-5 ${className}`}>{children}</div>;
 }
 
-// ── Main ─────────────────────────────────────────────────────────
 export default function StepOrder({ onNext }: { onNext: (data: OrderData) => void }) {
     const [selectedTypes, setSelectedTypes] = useState<Set<WaterType>>(new Set());
     const [refillSizes,   setRefillSizes]   = useState<SizeMap>({});
@@ -122,7 +121,6 @@ export default function StepOrder({ onNext }: { onNext: (data: OrderData) => voi
 
     const hasItems = lineItems.some(i => !i.label.includes('fee'));
 
-    // ── Calls onNext with ALL order data cleanly packaged ──
     const handleContinue = () => {
         onNext({
             selectedTypes: [...selectedTypes],
@@ -133,6 +131,7 @@ export default function StepOrder({ onNext }: { onNext: (data: OrderData) => voi
             grandTotal,
         });
     };
+
 
     const renderSizeRow = (type: WaterType) => {
         const map = getMap(type);
