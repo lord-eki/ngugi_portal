@@ -65,6 +65,7 @@ class CreateOrderAction
                         'order_id' => $order->id,
                         'label' => $line['label'],
                         'amount' => $line['amount'],
+                        'status' => 'pending'
                     ]);
                 }
             }
