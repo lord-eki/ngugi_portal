@@ -75,8 +75,7 @@ class DashboardController extends Controller
                 ] : null,
             ]);
 
-        $subscriptions = Subscription::whereIn('status', ['active', 'paused'])
-            ->latest()
+        $subscriptions = Subscription::latest()
             ->get()
             ->map(fn (Subscription $sub) => [
                 'id'               => $sub->id,

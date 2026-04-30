@@ -117,7 +117,7 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
             total_per_cycle: cycleTotal,
         };
 
-        router.post('/subscriptions/guest', payload, {
+        router.post('/subscriptions', payload, {
             onSuccess: () => { setDone(true); setSubmitting(false); },
             onError:   () => setSubmitting(false),
         });

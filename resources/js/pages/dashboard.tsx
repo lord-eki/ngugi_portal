@@ -111,7 +111,6 @@ function OrderCard({ order }: { order: Order }) {
     const [cancelling, setCancelling] = useState(false);
     const sc = S_STYLE[order.status] ?? S_STYLE.pending;
 
-    console.log(order);
 
     const handleCancel = () => {
         if (!confirm(`Cancel order #${order.id}?`)) return;
@@ -355,7 +354,6 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
     );
 }
 
-// ── New subscription wizard (inline) ──────────────────────────────
 const BOTTLE_SIZES = ['500ml','1L','5L','10L','15L','20L'];
 const FREQ_OPTIONS = [
     { id: 'daily',     label: 'Daily',     sub: 'Every day' },
