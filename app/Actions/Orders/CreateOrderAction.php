@@ -79,6 +79,8 @@ class CreateOrderAction
                 'recepient_phone' => $data['delivery']['recipientPhone'],
                 'schedule_type' => $data['delivery']['scheduleType'],
                 'scheduled_time' => $data['delivery']['scheduledTime'],
+                'contact_name' => $data['delivery']['contactName'] ?? null,
+                'contact_phone' => $data['delivery']['contactPhone'] ?? null,
                 'notes' => $data['delivery']['notes'],
             ]);
 

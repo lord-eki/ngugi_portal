@@ -3,11 +3,11 @@ import type { OrderData, DeliveryData } from './Wizard';
 
 const NAIROBI_CENTER = { lat: -1.2921, lng: 36.8219 };
 const SCHEDULE_OPTIONS = [
-    { id: 'asap',     label: 'As soon as possible', sub: 'Within 2–4 hours' },
-    { id: 'later',    label: 'Later today',          sub: 'Pick a time slot'  },
-    { id: 'next-day', label: 'Next day',             sub: 'Schedule tomorrow' },
+    { id: 'asap', label: 'As soon as possible', sub: 'Within 2–4 hours' },
+    { id: 'later', label: 'Later today', sub: 'Pick a time slot' },
+    { id: 'next-day', label: 'Next day', sub: 'Schedule tomorrow' },
 ] as const;
-const TIME_SLOTS = ['08:00–10:00','10:00–12:00','12:00–14:00','14:00–16:00','16:00–18:00','18:00–20:00'];
+const TIME_SLOTS = ['08:00–10:00', '10:00–12:00', '12:00–14:00', '14:00–16:00', '16:00–18:00', '18:00–20:00'];
 
 function SectionCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return <div className={`bg-white rounded-2xl border border-[#D4E8F5] p-5 ${className}`}>{children}</div>;
@@ -35,13 +35,13 @@ function MapPicker({ value, onChange, onAddressChange }: {
     onChange: (loc: { lat: number; lng: number }) => void;
     onAddressChange: (addr: string) => void;
 }) {
-    const mapRef       = useRef<HTMLDivElement>(null);
-    const mapInstance  = useRef<any>(null);
-    const markerRef    = useRef<any>(null);
-    const geocoder     = useRef<any>(null);
-    const searchRef    = useRef<HTMLInputElement>(null);
-    const [error,      setError]      = useState(false);
-    const [locating,   setLocating]   = useState(false);
+    const mapRef = useRef<HTMLDivElement>(null);
+    const mapInstance = useRef<any>(null);
+    const markerRef = useRef<any>(null);
+    const geocoder = useRef<any>(null);
+    const searchRef = useRef<HTMLInputElement>(null);
+    const [error, setError] = useState(false);
+    const [locating, setLocating] = useState(false);
     const [searchInput, setSearchInput] = useState('');
 
     const reverseGeocode = useCallback((latlng: { lat: number; lng: number }) => {
@@ -83,8 +83,8 @@ function MapPicker({ value, onChange, onAddressChange }: {
             center: value || NAIROBI_CENTER, zoom: 14, disableDefaultUI: true, zoomControl: true,
             styles: [
                 { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#DDEEFF' }] },
-                { featureType: 'road',  elementType: 'geometry', stylers: [{ color: '#F5F3EE' }] },
-                { featureType: 'poi',   stylers: [{ visibility: 'off' }] },
+                { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#F5F3EE' }] },
+                { featureType: 'poi', stylers: [{ visibility: 'off' }] },
             ],
         });
         mapInstance.current = map;
@@ -130,7 +130,7 @@ function MapPicker({ value, onChange, onAddressChange }: {
         <div className="space-y-3">
             <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8AA8C0]">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/><path d="M10.5 10.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" /><path d="M10.5 10.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
                 </div>
                 <input ref={searchRef} type="text" value={searchInput} onChange={e => setSearchInput(e.target.value)}
                     placeholder="Search location in Nairobi…"
@@ -145,21 +145,21 @@ function MapPicker({ value, onChange, onAddressChange }: {
                 <button type="button" onClick={useMyLocation} disabled={locating}
                     className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-white border border-[#C4DDEF] text-[#1A4A7A] text-xs font-semibold px-3 py-2 rounded-lg shadow-sm hover:bg-[#EEF6FF] transition-all disabled:opacity-60">
                     {locating
-                        ? <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>
-                        : <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        ? <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg>
+                        : <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.5" /><path d="M7 1v2M7 11v2M1 7h2M11 7h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
                     }
                     {locating ? 'Locating…' : 'Use my location'}
                 </button>
             </div>
             {value
                 ? <div className="flex items-start gap-2 bg-[#EEF6FF] border border-[#C4DDEF] rounded-xl px-4 py-3">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="mt-0.5 flex-shrink-0 text-[#1A78C2]"><circle cx="8" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="M8 1C5.24 1 3 3.24 3 6c0 4 5 9 5 9s5-5 5-9c0-2.76-2.24-5-5-5z" stroke="currentColor" strokeWidth="1.5"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="mt-0.5 flex-shrink-0 text-[#1A78C2]"><circle cx="8" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.5" /><path d="M8 1C5.24 1 3 3.24 3 6c0 4 5 9 5 9s5-5 5-9c0-2.76-2.24-5-5-5z" stroke="currentColor" strokeWidth="1.5" /></svg>
                     <div>
                         <p className="text-xs font-semibold text-[#1A4A7A]">Pin set</p>
                         {searchInput && <p className="text-xs text-[#4A6A8A] mt-0.5">{searchInput}</p>}
                         <p className="text-xs text-[#8AA8C0] mt-0.5">{value.lat.toFixed(5)}, {value.lng.toFixed(5)}</p>
                     </div>
-                  </div>
+                </div>
                 : <p className="text-xs text-[#8AA8C0] text-center">Tap the map or search to pin your delivery location</p>
             }
         </div>
@@ -173,33 +173,35 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
     onBack: () => void;
 }) {
     const [form, setForm] = useState<DeliveryData>({
-        locationMode:   'pin',
-        pinLocation:    null,
-        pinAddress:     '',
-        manualAddress:  '',
-        recipientName:  '',
+        locationMode: 'pin',
+        pinLocation: null,
+        pinAddress: '',
+        manualAddress: '',
+        contactName: '',
+        contactPhone: '',
+        recipientName: '',
         recipientPhone: '',
-        scheduleType:   'asap',
-        scheduledTime:  '',
-        notes:          '',
+        scheduleType: 'asap',
+        scheduledTime: '',
+        notes: '',
     });
 
     const patch = (updates: Partial<DeliveryData>) => setForm(prev => ({ ...prev, ...updates }));
 
     const isValid = (() => {
-        if (form.locationMode === 'pin')          return !!form.pinLocation;
-        if (form.locationMode === 'manual')       return form.manualAddress.trim().length > 5;
+        if (form.locationMode === 'pin') return !!form.pinLocation;
+        if (form.locationMode === 'manual') return form.manualAddress.trim().length > 5;
         if (form.locationMode === 'someone-else') return form.manualAddress.trim().length > 5 && form.recipientName.trim().length > 0 && form.recipientPhone.trim().length >= 9;
         return false;
     })();
 
     const needsTimeSlot = form.scheduleType === 'later' || form.scheduleType === 'next-day';
-    const canProceed    = isValid && (!needsTimeSlot || form.scheduledTime !== '');
+    const canProceed = isValid && (!needsTimeSlot || form.scheduledTime !== '');
 
     const locationTabs = [
-        { id: 'pin' as const,          label: 'Pin on map'   },
-        { id: 'manual' as const,       label: 'Type address' },
-        { id: 'someone-else' as const, label: 'For someone'  },
+        { id: 'pin' as const, label: 'Pin on map' },
+        { id: 'manual' as const, label: 'Type address' },
+        { id: 'someone-else' as const, label: 'For someone' },
     ];
 
     return (
@@ -213,23 +215,97 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                 <div className="flex gap-2 mb-5 bg-[#F5F8FC] p-1 rounded-xl">
                     {locationTabs.map(tab => (
                         <button key={tab.id} type="button" onClick={() => patch({ locationMode: tab.id })}
-                            className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition-all ${
-                                form.locationMode === tab.id
+                            className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition-all ${form.locationMode === tab.id
                                     ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]'
                                     : 'text-[#6A8AA8] hover:text-[#1A4A7A]'
-                            }`}>
+                                }`}>
                             {tab.label}
                         </button>
                     ))}
                 </div>
 
                 {form.locationMode === 'pin' && (
-                    <MapPicker value={form.pinLocation} onChange={loc => patch({ pinLocation: loc })} onAddressChange={addr => patch({ pinAddress: addr })} />
+                    <div className="space-y-4">
+                        <MapPicker
+                            value={form.pinLocation}
+                            onChange={loc => patch({ pinLocation: loc })}
+                            onAddressChange={addr => patch({ pinAddress: addr })}
+                        />
+                        <div className="border-t border-[#D4E8F5] pt-4">
+                            <p className="text-xs font-bold text-[#2A4A6A] mb-3">
+                                Your contact details
+                                <span className="font-normal text-[#8AA8C0] ml-1">— so the rider can reach you</span>
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <InputField
+                                    label="Your name"
+                                    value={form.contactName}
+                                    onChange={v => patch({ contactName: v })}
+                                    placeholder="e.g. John Kamau"
+                                />
+                                <div>
+                                    <label className="block text-sm font-semibold text-[#2A4A6A] mb-1.5">Phone</label>
+                                    <div className="flex gap-1.5">
+                                        <div className="flex items-center px-2 bg-[#F5F8FC] border border-[#C4DDEF] rounded-xl text-[11px] text-[#4A6A8A] font-medium flex-shrink-0">
+                                            🇰🇪 +254
+                                        </div>
+                                        <input
+                                            type="tel"
+                                            value={form.contactPhone}
+                                            onChange={e => patch({ contactPhone: e.target.value })}
+                                            placeholder="7XX XXX XXX"
+                                            className="flex-1 px-3 py-3 bg-white border border-[#C4DDEF] rounded-xl text-[#0D2A47] placeholder:text-[#A8C0D4] focus:outline-none focus:ring-2 focus:ring-[#1A78C2] text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 )}
                 {form.locationMode === 'manual' && (
                     <div className="space-y-4">
-                        <InputField label="Street / building address" value={form.manualAddress} onChange={v => patch({ manualAddress: v })} placeholder="e.g. 14 Westlands Road, Nairobi" required />
-                        <InputField label="Landmark / directions (optional)" value={form.notes} onChange={v => patch({ notes: v })} placeholder="e.g. Next to Shell, blue gate" />
+                        <InputField
+                            label="Street / building address"
+                            value={form.manualAddress}
+                            onChange={v => patch({ manualAddress: v })}
+                            placeholder="e.g. 14 Westlands Road, Nairobi"
+                            required
+                        />
+                        <InputField
+                            label="Landmark / directions (optional)"
+                            value={form.notes}
+                            onChange={v => patch({ notes: v })}
+                            placeholder="e.g. Next to Shell petrol station, blue gate"
+                        />
+                        <div className="border-t border-[#D4E8F5] pt-4">
+                            <p className="text-xs font-bold text-[#2A4A6A] mb-3">
+                                Your contact details
+                                <span className="font-normal text-[#8AA8C0] ml-1">— so the rider can reach you</span>
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <InputField
+                                    label="Your name"
+                                    value={form.contactName}
+                                    onChange={v => patch({ contactName: v })}
+                                    placeholder="e.g. John Kamau"
+                                />
+                                <div>
+                                    <label className="block text-sm font-semibold text-[#2A4A6A] mb-1.5">Phone</label>
+                                    <div className="flex gap-1.5">
+                                        <div className="flex items-center px-2 bg-[#F5F8FC] border border-[#C4DDEF] rounded-xl text-[11px] text-[#4A6A8A] font-medium flex-shrink-0">
+                                            🇰🇪 +254
+                                        </div>
+                                        <input
+                                            type="tel"
+                                            value={form.contactPhone}
+                                            onChange={e => patch({ contactPhone: e.target.value })}
+                                            placeholder="7XX XXX XXX"
+                                            className="flex-1 px-3 py-3 bg-white border border-[#C4DDEF] rounded-xl text-[#0D2A47] placeholder:text-[#A8C0D4] focus:outline-none focus:ring-2 focus:ring-[#1A78C2] text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
                 {form.locationMode === 'someone-else' && (
@@ -261,15 +337,14 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                         const active = form.scheduleType === opt.id;
                         return (
                             <button key={opt.id} type="button" onClick={() => patch({ scheduleType: opt.id, scheduledTime: '' })}
-                                className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-all ${
-                                    active ? 'border-[#1A4A7A] bg-[#EEF6FF]' : 'border-[#D4E8F5] bg-[#F9FBFD] hover:border-[#9ECBE8]'
-                                }`}>
+                                className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 text-left transition-all ${active ? 'border-[#1A4A7A] bg-[#EEF6FF]' : 'border-[#D4E8F5] bg-[#F9FBFD] hover:border-[#9ECBE8]'
+                                    }`}>
                                 <div>
                                     <div className={`text-sm font-semibold ${active ? 'text-[#1A4A7A]' : 'text-[#0D2A47]'}`}>{opt.label}</div>
                                     <div className="text-xs text-[#6A8AA8] mt-0.5">{opt.sub}</div>
                                 </div>
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${active ? 'border-[#1A4A7A] bg-[#1A4A7A]' : 'border-[#C4DDEF] bg-white'}`}>
-                                    {active && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l1.8 1.8L6.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                    {active && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l1.8 1.8L6.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                                 </div>
                             </button>
                         );
@@ -283,9 +358,8 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                                 const active = form.scheduledTime === slot;
                                 return (
                                     <button key={slot} type="button" onClick={() => patch({ scheduledTime: slot })}
-                                        className={`py-2 px-1 rounded-lg border text-xs font-medium transition-all text-center ${
-                                            active ? 'border-[#1A4A7A] bg-[#1A4A7A] text-white' : 'border-[#D4E8F5] bg-white text-[#4A6A8A] hover:border-[#9ECBE8]'
-                                        }`}>
+                                        className={`py-2 px-1 rounded-lg border text-xs font-medium transition-all text-center ${active ? 'border-[#1A4A7A] bg-[#1A4A7A] text-white' : 'border-[#D4E8F5] bg-white text-[#4A6A8A] hover:border-[#9ECBE8]'
+                                            }`}>
                                         {slot}
                                     </button>
                                 );
@@ -320,7 +394,7 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                 <button type="button" onClick={() => onNext(form)} disabled={!canProceed}
                     className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-xl bg-[#1A4A7A] text-white font-semibold hover:bg-[#0D2A47] transition-all shadow-lg shadow-[#1A4A7A]/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
                     Continue to payment
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </button>
             </div>
         </div>

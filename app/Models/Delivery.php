@@ -10,7 +10,7 @@ class Delivery extends Model
     protected $fillable = [
         'order_id', 'location_mode', 'manual_address',
         'pin_address', 'recepient_name', 'recepient_phone',
-        'schedule_type', 'scheduled_time', 'notes',
+        'schedule_type', 'scheduled_time', 'notes','contact_phone','contact_name'
     ];
 
 

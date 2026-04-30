@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -30,9 +31,9 @@ class DashboardController extends Controller
             ->through(fn (Order $order) => [
                 'id'             => $order->id,
                 'delivery_speed' => $order->delivery_speed,
-                'status'         => $order->status,
+                'status'         => $order->status ?? 'pending',
                 'status_label'   => $order->status_label,
-                'grand_total'    => $order->grand_total,
+                'grand_total'    => (int) $order->grand_total,
                 'can_cancel'     => $order->canBeCancelled(),
                 'created_at'     => $order->created_at->toISOString(),
 
@@ -40,27 +41,29 @@ class DashboardController extends Controller
                     'id'              => $item->id,
                     'type'            => $item->type,
                     'size'            => $item->size,
-                    'quantity'        => $item->quantity,
-                    'is_bundled'      => $item->is_bundled,
-                    'bundle_quantity' => $item->bundle_quantity,
-                    'bundle_size'     => $item->bundle_size,
-                    'amount'          => $item->amount,
-                    'label'           => $item->label,  // computed accessor
+                    'quantity'        => (int) $item->quantity,
+                    'is_bundled'      => (bool) $item->is_bundled,
+                    'bundle_quantity' => $item->bundle_quantity ? (int) $item->bundle_quantity : null,
+                    'bundle_size'     => $item->bundle_size ? (int) $item->bundle_size : null,
+                    'amount'          => (int) $item->amount,
+                    'label'           => $item->label,
                 ]),
 
-                'charges' => $order->charges->map(fn ($charge) => [
-                    'id'     => $charge->id,
-                    'label'  => $charge->label,
-                    'amount' => $charge->amount,
+                'charges' => $order->charges->map(fn ($c) => [
+                    'id'     => $c->id,
+                    'label'  => $c->label,
+                    'amount' => (int) $c->amount,
                 ]),
 
                 'delivery' => $order->delivery ? [
-                    'location_mode'   => $order->delivery->location_mode,
-                    'address'         => $order->delivery->address,   
+                    'location_mode'  => $order->delivery->location_mode,
+                    'address'        => $order->delivery->address,          
+                    'contact_name'   => $order->delivery->contact_name ?? null,
+                    'contact_phone'  => $order->delivery->contact_phone ?? null,
                     'recepient_name'  => $order->delivery->recepient_name,
                     'recepient_phone' => $order->delivery->recepient_phone,
-                    'schedule_label'  => $order->delivery->schedule_label,
-                    'notes'           => $order->delivery->notes,
+                    'schedule_label' => $order->delivery->schedule_label,   
+                    'notes'          => $order->delivery->notes,
                 ] : null,
 
                 'payment' => $order->payment ? [
@@ -72,14 +75,30 @@ class DashboardController extends Controller
                 ] : null,
             ]);
 
+        $subscriptions = Subscription::whereIn('status', ['active', 'paused'])
+            ->latest()
+            ->get()
+            ->map(fn (Subscription $sub) => [
+                'id'               => $sub->id,
+                'frequency'        => $sub->frequency,
+                'frequency_label'  => $sub->frequency_label,
+                'status'           => $sub->status,
+                'next_delivery_at' => $sub->next_delivery_at?->toISOString(),
+                'sizes'            => $sub->sizes,
+                'total_per_cycle'  => $sub->total_per_cycle,
+                'created_at'       => $sub->created_at->toISOString(),
+            ]);
+
         return Inertia::render('dashboard', [
-            'stats'  => $stats,
-            'orders' => $orders,
+            'stats'         => $stats,
+            'orders'        => $orders,
+            'subscriptions' => $subscriptions,
         ]);
     }
 
     public function cancel(Order $order): \Illuminate\Http\RedirectResponse
     {
+        abort_if($order->user_id !== Auth::id(), 403);
 
         if (! $order->canBeCancelled()) {
             return back()->withErrors(['order' => 'This order cannot be cancelled.']);
