@@ -66,15 +66,58 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
         try {
             const paymentData: PaymentData = { method: 'mpesa-stk', phone, tillCode: '', transactionCode: '', cardNumber: '', cardExpiry: '', cardCvv: '' };
 
-            await axios.post('/orders', buildPayload(paymentData));
-            setStkStatus('success');
-            setTimeout(() => { onNext(paymentData); }, 1500);
+            const response = await axios.post('/orders', buildPayload(paymentData));
+            const orderId = response.data.order_id;
+            if (!orderId) {
+                throw new Error('Order ID was not returned by the server')
+            }
+
+            setStkStatus('waiting');
+
+            const checkPaymentStatus = async() => {
+                try{
+
+                    const statusResponse = await axios.get(`/orders/${orderId}/pyment-status`);
+                    const status  = statusResponse.data.status;
+
+                    if(status === 'paid')
+                    {
+                        setStkStatus('success');
+                        setSubmitting(false);
+
+                        setTimeout(() => {
+                            onNext(paymentData);
+                        },1000);
+
+                        return;
+                    }
+
+                    if(status === 'failed')
+                    {
+                        setStkStatus('failed');
+                        setSubmitting(false);
+                        setError(statusResponse.data.message || 'Mpesa payment failed . Please try again');
+
+                        return;
+                    }
+
+                    setTimeout(checkPaymentStatus , 3000);
+
+                }catch(error){
+                    console.error('Payment status check failed :', error);
+                    setStkStatus('failed');
+                    setSubmitting(false);
+                    setError('Unable to check payment status. Please try again');
+                }
+            };
+
+            setTimeout(checkPaymentStatus, 3000);
+
         } catch (e: any) {
             setStkStatus('failed');
-            setError(e?.response?.data?.message || 'Payment failed. Please try again.');
-        } finally {
             setSubmitting(false);
-        }
+            setError(e?.response?.data?.message || e?.message || 'Unable to initiate Mpesa payment.');
+        } 
     };
 
     // ── Manual till flow 
@@ -86,7 +129,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
         try {
             const paymentData: PaymentData = { method: 'mpesa-till', phone: '', tillCode, transactionCode, cardNumber: '', cardExpiry: '', cardCvv: '' };
 
-            let res = await axios.post('/order', buildPayload(paymentData));
+            let res = await axios.post('/orders', buildPayload(paymentData));
             console.log(res);
 
             onNext(paymentData);
@@ -105,7 +148,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
 
         try {
             const paymentData: PaymentData = { method: 'card', phone: '', tillCode: '', transactionCode: '', cardNumber, cardExpiry, cardCvv };
-            await axios.post('/order', buildPayload(paymentData));
+            await axios.post('/orders', buildPayload(paymentData));
             onNext(paymentData);
         } catch (e: any) {
             setError(e?.response?.data?.message || 'Card payment failed. Please try again.');

@@ -7,13 +7,32 @@ use App\Models\Order;
 use App\Models\OrderCharge;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Services\MpesaService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use Throwable;
 
 class CreateOrderAction
 {
-    public function handle(array $data)
+    private function normalizePhoneNumber(string $phone): string
+    {
+        $phone = preg_replace('/\D/', '', $phone);
+
+        if (str_starts_with($phone, '0')) {
+            return '254'.substr($phone, 1);
+        }
+        if (str_starts_with($phone, '254')) {
+            return $phone;
+        }
+        if (str_starts_with($phone, '7' || str_starts_with($phone, '1'))) {
+            return '254'.$phone;
+        }
+
+        throw new InvalidArgumentException('Invalid Kenyan Number');
+    }
+
+    public function handle(array $data, MpesaService $mpesaService)
     {
 
         DB::beginTransaction();
@@ -65,7 +84,7 @@ class CreateOrderAction
                         'order_id' => $order->id,
                         'label' => $line['label'],
                         'amount' => $line['amount'],
-                        'status' => 'pending'
+                        'status' => 'pending',
                     ]);
                 }
             }
@@ -86,18 +105,30 @@ class CreateOrderAction
 
             // payment
 
-            Payment::create([
+            $payment = Payment::create([
                 'order_id' => $order->id,
                 'method' => $data['payment']['method'],
-                'phone' => $data['payment']['phone'],
-                'till_code' => $data['payment']['tillCode'],
-                'transaction_code' => $data['payment']['transactionCode'],
-                'card_number' => $data['payment']['cardNumber'],
-                'card_expiry' => $data['payment']['cardExpiry'],
-                'card_cvv' => $data['payment']['cardCvv'],
+                'phone' => $data['payment']['phone'] ?? null,
+                'till_code' => $data['payment']['tillCode'] ?? null,
+                'transaction_code' => $data['payment']['transactionCode'] ?? null,
+                'card_number' => $data['payment']['cardNumber'] ?? null,
+                'card_expiry' => $data['payment']['cardExpiry'] ?? null,
+                'card_cvv' => $data['payment']['cardCvv'] ?? null,
+                'status' => $data['payment']['methos'] === 'mpesa-stk' ? 'pending' : 'pending',
             ]);
 
             DB::commit();
+
+            if ($data['payment']['method'] === 'mpesa-stk') {
+                $phone = $this->normalizePhoneNumber($data['payment']['phone']);
+
+                $response = $mpesaService->stkPush(phone: $phone, amount: (int) $order->grand_total, accountReference: 'ORDER-'.$order->id, description: 'Payment for order #'.$order->id);
+
+                $payment->update([
+                    'checkout_request_id' => $response['CheckoutRequestID'] ?? null,
+                    'merchant_request_id' => $response['MerchantRequestID'] ?? null,
+                ]);
+            }
 
             return response()->json([
                 'message' => 'Order created successfully',

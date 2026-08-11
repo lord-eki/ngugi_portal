@@ -12,6 +12,12 @@ Route::inertia('/', 'welcome', [
 
 Route::resource('orders', OrderController::class);
 
+Route::get('/orders/{order}/payment-status', [OrderController::class, 'paymentStatus'])
+    ->name('orders.payment-status');
+
+Route::post('/mpesa/callback', [MpesaCallbackController::class, 'handle'])
+    ->name('mpesa.callback');
+
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

@@ -6,12 +6,9 @@ use App\Actions\Orders\CancelOrderAction;
 use App\Actions\Orders\CreateOrderAction;
 use App\Actions\Orders\UpdateOrderStatus;
 use App\Actions\Orders\VerifyPaymentAction;
-use App\Http\Requests\StoreOrderRequest;
-use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Order;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
@@ -41,6 +38,11 @@ class OrderController extends Controller
 
     return $action->handle($order);
        
+    }
+
+    public function paymentStatus(Order $order , PaymentStatusAction $action) : RedirectResponse
+    {
+        return $action->handle($order);
     }
 
    
