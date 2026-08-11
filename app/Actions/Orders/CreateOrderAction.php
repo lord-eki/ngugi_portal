@@ -15,6 +15,12 @@ use Throwable;
 
 class CreateOrderAction
 {
+
+public $mpesaService;
+
+public  function __construct(MpesaService $mpesaService) {
+    $this->mpesaService = $mpesaService;
+}
     private function normalizePhoneNumber(string $phone): string
     {
         $phone = preg_replace('/\D/', '', $phone);
@@ -32,7 +38,7 @@ class CreateOrderAction
         throw new InvalidArgumentException('Invalid Kenyan Number');
     }
 
-    public function handle(array $data, MpesaService $mpesaService)
+    public function handle(array $data)
     {
 
         DB::beginTransaction();
@@ -114,7 +120,7 @@ class CreateOrderAction
                 'card_number' => $data['payment']['cardNumber'] ?? null,
                 'card_expiry' => $data['payment']['cardExpiry'] ?? null,
                 'card_cvv' => $data['payment']['cardCvv'] ?? null,
-                'status' => $data['payment']['methos'] === 'mpesa-stk' ? 'pending' : 'pending',
+                'status' => $data['payment']['method'] === 'mpesa-stk' ? 'pending' : 'pending',
             ]);
 
             DB::commit();
@@ -122,7 +128,7 @@ class CreateOrderAction
             if ($data['payment']['method'] === 'mpesa-stk') {
                 $phone = $this->normalizePhoneNumber($data['payment']['phone']);
 
-                $response = $mpesaService->stkPush(phone: $phone, amount: (int) $order->grand_total, accountReference: 'ORDER-'.$order->id, description: 'Payment for order #'.$order->id);
+                $response = $this->mpesaService->stkPush(phone: $phone, amount: (int) $order->grand_total, accountReference: 'ORDER-'.$order->id, description: 'Payment for order #'.$order->id);
 
                 $payment->update([
                     'checkout_request_id' => $response['CheckoutRequestID'] ?? null,

@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\MpesaCallbackController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 

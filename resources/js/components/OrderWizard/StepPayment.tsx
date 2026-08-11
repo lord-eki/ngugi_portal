@@ -58,7 +58,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
     });
 
     const handleStkPush = async () => {
-        if (!phone || phone.length < 9) { setError('Enter a valid phone number'); return; }
+        if (!phone || phone.length < 10) { setError('Enter a valid phone number'); return; }
         setError('');
         setSubmitting(true);
         setStkStatus('waiting');
@@ -221,7 +221,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                     <h3 className="font-bold text-[#0D2A47] mb-4">Enter your M-Pesa number</h3>
                     <div className="flex gap-2 mb-4">
                         <div className="flex items-center px-3 bg-[#F5F8FC] border border-[#C4DDEF] rounded-xl text-xs text-[#4A6A8A] font-medium flex-shrink-0">🇰🇪 +254</div>
-                        <input type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))} placeholder="7XX XXX XXX"
+                        <input type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="07XX XXX XXX"
                             className="flex-1 px-4 py-3 bg-white border border-[#C4DDEF] rounded-xl text-[#0D2A47] placeholder:text-[#A8C0D4] focus:outline-none focus:ring-2 focus:ring-[#1A78C2] text-sm"
                         />
                     </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Orders\CancelOrderAction;
 use App\Actions\Orders\CreateOrderAction;
+use App\Actions\Orders\PaymentStatusAction;
 use App\Actions\Orders\UpdateOrderStatus;
 use App\Actions\Orders\VerifyPaymentAction;
 use App\Models\Order;
@@ -40,7 +41,7 @@ class OrderController extends Controller
        
     }
 
-    public function paymentStatus(Order $order , PaymentStatusAction $action) : RedirectResponse
+    public function paymentStatus(Order $order , PaymentStatusAction $action) 
     {
         return $action->handle($order);
     }
