@@ -75,8 +75,7 @@ class DashboardController extends Controller
                 ] : null,
             ]);
 
-        $subscriptions = Subscription::latest()
-            ->get()
+        $subscriptions = Subscription::latest()->get()
             ->map(fn (Subscription $sub) => [
                 'id'               => $sub->id,
                 'frequency'        => $sub->frequency,
@@ -95,16 +94,5 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function cancel(Order $order): \Illuminate\Http\RedirectResponse
-    {
-        abort_if($order->user_id !== Auth::id(), 403);
-
-        if (! $order->canBeCancelled()) {
-            return back()->withErrors(['order' => 'This order cannot be cancelled.']);
-        }
-
-        $order->update(['status' => 'cancelled']);
-
-        return back()->with('success', 'Order cancelled.');
-    }
+    
 }

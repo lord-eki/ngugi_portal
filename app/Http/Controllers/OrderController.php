@@ -2,34 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Orders\CancelOrderAction;
 use App\Actions\Orders\CreateOrderAction;
+use App\Actions\Orders\UpdateOrderStatus;
+use App\Actions\Orders\VerifyPaymentAction;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Order;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request , CreateOrderAction $createOrderAction)
     
     {
@@ -38,35 +25,23 @@ class OrderController extends Controller
 
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Order $order)
+     public function updateOrderStatus(Order $order, Request $request , UpdateOrderStatus $action): RedirectResponse
     {
-        //
+        return $action->handle($request,$order);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Order $order)
+    public function cancel(Order $order , CancelOrderAction $action): RedirectResponse
     {
-        //
+        return $action->handle($order);
+        
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateOrderRequest $request, Order $order)
+    public function verifyPayment(Order $order , VerifyPaymentAction $action): RedirectResponse
     {
-        //
+
+    return $action->handle($order);
+       
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Order $order)
-    {
-        //
-    }
+   
 }

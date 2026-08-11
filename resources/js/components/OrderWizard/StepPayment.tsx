@@ -66,7 +66,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
         try {
             const paymentData: PaymentData = { method: 'mpesa-stk', phone, tillCode: '', transactionCode: '', cardNumber: '', cardExpiry: '', cardCvv: '' };
 
-            await axios.post('/order', buildPayload(paymentData));
+            await axios.post('/orders', buildPayload(paymentData));
             setStkStatus('success');
             setTimeout(() => { onNext(paymentData); }, 1500);
         } catch (e: any) {
@@ -148,8 +148,8 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                 <div className="space-y-2">
                     {([
                         { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push', sub: 'You\'ll get a prompt on your phone', badge: 'Recommended' },
-                        { id: 'mpesa-till' as const, label: 'M-Pesa Till Number', sub: 'Pay manually via M-Pesa menu', badge: null },
-                        { id: 'card' as const, label: 'Visa / Mastercard', sub: 'Secure card payment via Flutterwave', badge: null },
+                        // { id: 'mpesa-till' as const, label: 'M-Pesa Till Number', sub: 'Pay manually via M-Pesa menu', badge: null },
+                        // { id: 'card' as const, label: 'Visa / Mastercard', sub: 'Secure card payment via Flutterwave', badge: null },
                     ] as const).map(opt => {
                         const active = method === opt.id;
                         return (

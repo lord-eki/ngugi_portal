@@ -25,8 +25,8 @@ class Payment extends Model
     {
         return match ($this->method) {
             'mpesa-stk'  => 'M-Pesa STK Push',
-            'mpesa-till' => 'M-Pesa Till',
-            'card'       => 'Card',
+            // 'mpesa-till' => 'M-Pesa Till',
+            // 'card'       => 'Card',
             default      => $this->method,
         };
     }

@@ -9,8 +9,8 @@ interface Props {
 
 const METHOD_LABELS: Record<string, string> = {
     'mpesa-stk':  'M-Pesa STK Push',
-    'mpesa-till': 'M-Pesa Till',
-    'card':       'Card payment',
+    // 'mpesa-till': 'M-Pesa Till',
+    // 'card':       'Card payment',
 };
 
 const ORDER_NUM = `BH${Date.now().toString().slice(-6)}`;

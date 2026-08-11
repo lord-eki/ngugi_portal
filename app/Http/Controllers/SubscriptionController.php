@@ -28,7 +28,7 @@ class SubscriptionController extends Controller
             'payment_method'   => ['required', 'in:mpesa-stk,card'],
         ]);
 
-        $userId = Auth::id(); 
+        $userId = Auth::id();
 
         $sizesWithAmounts = array_map(function ($item) {
             $prices = [
@@ -69,7 +69,7 @@ class SubscriptionController extends Controller
         return back()->with('subscription_created', true);
     }
 
- 
+
     public function pause(Subscription $subscription): RedirectResponse
     {
         abort_if(! Auth::check(), 403);
@@ -80,7 +80,7 @@ class SubscriptionController extends Controller
         return back()->with('success', 'Subscription paused.');
     }
 
-   
+
     public function resume(Subscription $subscription): RedirectResponse
     {
         abort_if(! Auth::check(), 403);
@@ -94,7 +94,22 @@ class SubscriptionController extends Controller
         return back()->with('success', 'Subscription resumed.');
     }
 
-    
+
+ 
+    public function activate(Subscription $subscription): RedirectResponse
+    {
+        abort_if(! Auth::check(), 403);
+        abort_if($subscription->status !== 'pending', 422);
+
+        $subscription->update([
+            'status'           => 'active',
+            'next_delivery_at' => $subscription->calculateNextDelivery(),
+        ]);
+
+        return back()->with('success', 'Subscription activated.');
+    }
+
+
     public function cancel(Subscription $subscription): RedirectResponse
     {
         abort_if(! Auth::check(), 403);
@@ -104,4 +119,5 @@ class SubscriptionController extends Controller
 
         return back()->with('success', 'Subscription cancelled.');
     }
+
 }
