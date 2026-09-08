@@ -120,15 +120,16 @@ public  function __construct(MpesaService $mpesaService) {
                 'card_number' => $data['payment']['cardNumber'] ?? null,
                 'card_expiry' => $data['payment']['cardExpiry'] ?? null,
                 'card_cvv' => $data['payment']['cardCvv'] ?? null,
-                'status' => $data['payment']['method'] === 'mpesa-stk' ? 'pending' : 'pending',
+                'status' => $data['payment']['method'] === 'mpesa-till' ? 'pending' : 'pending',
             ]);
 
             DB::commit();
 
-            if ($data['payment']['method'] === 'mpesa-stk') {
+            if ($data['payment']['method'] === 'mpesa-till') {
                 $phone = $this->normalizePhoneNumber($data['payment']['phone']);
 
-                $response = $this->mpesaService->stkPush(phone: $phone, amount: (int) $order->grand_total, accountReference: 'ORDER-'.$order->id, description: 'Payment for order #'.$order->id);
+                $response =  $this->mpesaService->c2b(amount: (int) $order->grand_total, msisdn: $phone, billrefnumber: 'Payment for ORDER-'.$order->id);
+
 
                 $payment->update([
                     'checkout_request_id' => $response['CheckoutRequestID'] ?? null,

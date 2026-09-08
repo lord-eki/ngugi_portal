@@ -18,7 +18,7 @@ function SectionCard({ children, className = '' }: { children: React.ReactNode; 
 const TILL_NUMBER = '123456';
 
 export default function StepPayment({ orderData, deliveryData, onNext, onBack }: Props) {
-    const [method, setMethod] = useState<PaymentMethod>('mpesa-stk');
+    const [method, setMethod] = useState<PaymentMethod>('mpesa-till');
     const [phone, setPhone] = useState('');
     const [tillCode, setTillCode] = useState('');
     const [transactionCode, setTransactionCode] = useState('');
@@ -127,7 +127,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
         setSubmitting(true);
 
         try {
-            const paymentData: PaymentData = { method: 'mpesa-till', phone: '', tillCode, transactionCode, cardNumber: '', cardExpiry: '', cardCvv: '' };
+            const paymentData: PaymentData = { method: 'mpesa-till', phone: '', tillCode: TILL_NUMBER, transactionCode, cardNumber: '', cardExpiry: '', cardCvv: '' };
 
             let res = await axios.post('/orders', buildPayload(paymentData));
             console.log(res);
@@ -190,8 +190,8 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
 
                 <div className="space-y-2">
                     {([
-                        { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push', sub: 'You\'ll get a prompt on your phone', badge: 'Recommended' },
-                        // { id: 'mpesa-till' as const, label: 'M-Pesa Till Number', sub: 'Pay manually via M-Pesa menu', badge: null },
+                        // { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push', sub: 'You\'ll get a prompt on your phone', badge: 'Recommended' },
+                        { id: 'mpesa-till' as const, label: 'M-Pesa Till Number', sub: 'Pay manually via M-Pesa menu', badge: null },
                         // { id: 'card' as const, label: 'Visa / Mastercard', sub: 'Secure card payment via Flutterwave', badge: null },
                     ] as const).map(opt => {
                         const active = method === opt.id;

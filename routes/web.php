@@ -3,7 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SubscriptionController;
-use App\Http\Controllers\MpesaCallbackController;
+use App\Http\Controllers\MpesaController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -16,8 +16,12 @@ Route::resource('orders', OrderController::class);
 Route::get('/orders/{order}/payment-status', [OrderController::class, 'paymentStatus'])
     ->name('orders.payment-status');
 
-Route::post('/mpesa/callback', [MpesaCallbackController::class, 'handle'])
-    ->name('mpesa.callback');
+Route::get('/access-token', [MpesaController::class, 'accessToken']);
+Route::post('/register-urls', [MpesaController::class, 'registerUrls']);
+Route::post('/validation', [MpesaController::class, 'validateURL'])
+    ->name('validation');
+Route::post('/confirmation', [MpesaController::class, 'confirmURL'])
+    ->name('confirmation');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -37,7 +41,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/subscriptions/{subscription}/resume', [SubscriptionController::class, 'resume'])->name('subscriptions.resume');
     Route::post('/subscriptions/{subscription}/activate', [SubscriptionController::class, 'activate'])->name('subscriptions.activate');
     Route::post('/subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
-
 });
 
-require __DIR__.'/settings.php';
+require __DIR__ . '/settings.php';

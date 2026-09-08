@@ -8,8 +8,8 @@ interface Props {
 }
 
 const METHOD_LABELS: Record<string, string> = {
-    'mpesa-stk':  'M-Pesa STK Push',
-    // 'mpesa-till': 'M-Pesa Till',
+    // 'mpesa-stk':  'M-Pesa STK Push',
+    'mpesa-till': 'M-Pesa Till',
     // 'card':       'Card payment',
 };
 
