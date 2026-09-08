@@ -20,8 +20,6 @@ const TILL_NUMBER = '123456';
 export default function StepPayment({ orderData, deliveryData, onNext, onBack }: Props) {
     const [method, setMethod] = useState<PaymentMethod>('mpesa-till');
     const [phone, setPhone] = useState('');
-    const [tillCode, setTillCode] = useState('');
-    const [transactionCode, setTransactionCode] = useState('');
     const [cardNumber, setCardNumber] = useState('');
     const [cardExpiry, setCardExpiry] = useState('');
     const [cardCvv, setCardCvv] = useState('');
@@ -57,54 +55,62 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
         payment: paymentData,
     });
 
+    // ── M-Pesa flow (STK push) — used for both 'mpesa-stk' and 'mpesa-till'.
+    // The backend is the only source of truth for payment success: it comes
+    // from the STK callback, never from anything the customer types in here.
     const handleStkPush = async () => {
-        if (!phone || phone.length < 10) { setError('Enter a valid phone number'); return; }
+        if (!phone || phone.length < 9) { setError('Enter a valid phone number'); return; }
         setError('');
         setSubmitting(true);
         setStkStatus('waiting');
 
         try {
-            const paymentData: PaymentData = { method: 'mpesa-stk', phone, tillCode: '', transactionCode: '', cardNumber: '', cardExpiry: '', cardCvv: '' };
+            const paymentData: PaymentData = {
+                method,
+                phone,
+                tillCode: method === 'mpesa-till' ? TILL_NUMBER : '',
+                transactionCode: '',
+                cardNumber: '',
+                cardExpiry: '',
+                cardCvv: '',
+            };
 
             const response = await axios.post('/orders', buildPayload(paymentData));
             const orderId = response.data.order_id;
             if (!orderId) {
-                throw new Error('Order ID was not returned by the server')
+                throw new Error('Order ID was not returned by the server');
             }
 
             setStkStatus('waiting');
 
-            const checkPaymentStatus = async() => {
-                try{
+            const checkPaymentStatus = async () => {
+                try {
+                    const statusResponse = await axios.get(`/orders/${orderId}/payment-status`);
+                    const status = statusResponse.data.status;
 
-                    const statusResponse = await axios.get(`/orders/${orderId}/pyment-status`);
-                    const status  = statusResponse.data.status;
-
-                    if(status === 'paid')
-                    {
+                    if (status === 'paid') {
                         setStkStatus('success');
                         setSubmitting(false);
 
                         setTimeout(() => {
                             onNext(paymentData);
-                        },1000);
+                        }, 1000);
 
                         return;
                     }
 
-                    if(status === 'failed')
-                    {
+                    if (status === 'failed') {
                         setStkStatus('failed');
                         setSubmitting(false);
-                        setError(statusResponse.data.message || 'Mpesa payment failed . Please try again');
+                        setError(statusResponse.data.message || 'Mpesa payment failed. Please try again');
 
                         return;
                     }
 
-                    setTimeout(checkPaymentStatus , 3000);
+                    setTimeout(checkPaymentStatus, 3000);
 
-                }catch(error){
-                    console.error('Payment status check failed :', error);
+                } catch (error) {
+                    console.error('Payment status check failed:', error);
                     setStkStatus('failed');
                     setSubmitting(false);
                     setError('Unable to check payment status. Please try again');
@@ -117,30 +123,10 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
             setStkStatus('failed');
             setSubmitting(false);
             setError(e?.response?.data?.message || e?.message || 'Unable to initiate Mpesa payment.');
-        } 
-    };
-
-    // ── Manual till flow 
-    const handleTillSubmit = async () => {
-        if (!transactionCode.trim()) { setError('Enter your M-Pesa transaction code'); return; }
-        setError('');
-        setSubmitting(true);
-
-        try {
-            const paymentData: PaymentData = { method: 'mpesa-till', phone: '', tillCode: TILL_NUMBER, transactionCode, cardNumber: '', cardExpiry: '', cardCvv: '' };
-
-            let res = await axios.post('/orders', buildPayload(paymentData));
-            console.log(res);
-
-            onNext(paymentData);
-        } catch (e: any) {
-            setError(e?.response?.data?.message || 'Submission failed. Please try again.');
-        } finally {
-            setSubmitting(false);
         }
     };
 
-    // ── Card payment flow 
+    // ── Card payment flow
     const handleCardSubmit = async () => {
         if (!cardNumber || !cardExpiry || !cardCvv) { setError('Fill in all card details'); return; }
         setError('');
@@ -191,7 +177,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                 <div className="space-y-2">
                     {([
                         // { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push', sub: 'You\'ll get a prompt on your phone', badge: 'Recommended' },
-                        { id: 'mpesa-till' as const, label: 'M-Pesa Till Number', sub: 'Pay manually via M-Pesa menu', badge: null },
+                        { id: 'mpesa-till' as const, label: 'M-Pesa Till Number', sub: 'We\'ll send a prompt to your phone', badge: null },
                         // { id: 'card' as const, label: 'Visa / Mastercard', sub: 'Secure card payment via Flutterwave', badge: null },
                     ] as const).map(opt => {
                         const active = method === opt.id;
@@ -215,10 +201,15 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                 </div>
             </SectionCard>
 
-            {/* ── M-Pesa STK Push ── */}
-            {method === 'mpesa-stk' && (
+            {/* ── M-Pesa (STK push) — covers both 'mpesa-stk' and 'mpesa-till' ── */}
+            {(method === 'mpesa-stk' || method === 'mpesa-till') && (
                 <SectionCard>
-                    <h3 className="font-bold text-[#0D2A47] mb-4">Enter your M-Pesa number</h3>
+                    <h3 className="font-bold text-[#0D2A47] mb-1">
+                        {method === 'mpesa-till' ? `Pay via M-Pesa Till ${TILL_NUMBER}` : 'Enter your M-Pesa number'}
+                    </h3>
+                    <p className="text-xs text-[#8AA8C0] mb-4">
+                        We'll send a payment prompt straight to your phone — enter your M-Pesa PIN to confirm.
+                    </p>
                     <div className="flex gap-2 mb-4">
                         <div className="flex items-center px-3 bg-[#F5F8FC] border border-[#C4DDEF] rounded-xl text-xs text-[#4A6A8A] font-medium flex-shrink-0">🇰🇪 +254</div>
                         <input type="tel" value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="07XX XXX XXX"
@@ -256,44 +247,9 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                         <button type="button" onClick={handleStkPush} disabled={submitting || phone.length < 9}
                             className="w-full py-3.5 rounded-xl bg-[#1A4A7A] text-white font-semibold hover:bg-[#0D2A47] transition-all shadow-lg shadow-[#1A4A7A]/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                             {submitting ? <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg> : null}
-                            Pay KES {total.toLocaleString()} via M-Pesa
+                            Pay KES {total.toLocaleString()} {method === 'mpesa-till' ? 'via Till' : 'via M-Pesa'}
                         </button>
                     ) : null}
-                </SectionCard>
-            )}
-
-            {/* ── M-Pesa Till ── */}
-            {method === 'mpesa-till' && (
-                <SectionCard>
-                    <h3 className="font-bold text-[#0D2A47] mb-4">Pay via M-Pesa Till</h3>
-                    <div className="bg-[#EEF6FF] border border-[#C4DDEF] rounded-xl p-4 mb-5 space-y-2">
-                        <p className="text-xs text-[#6A8AA8]">Follow these steps:</p>
-                        {[
-                            'Go to M-Pesa on your phone',
-                            'Select Lipa na M-Pesa → Buy Goods',
-                            `Enter Till Number: ${TILL_NUMBER}`,
-                            `Amount: KES ${total.toLocaleString()}`,
-                            'Enter your M-Pesa PIN and confirm',
-                        ].map((step, i) => (
-                            <div key={i} className="flex items-start gap-2 text-xs text-[#0D2A47]">
-                                <span className="w-5 h-5 rounded-full bg-[#1A4A7A] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
-                                <span className={i === 2 ? 'font-bold text-[#1A4A7A]' : ''}>{step}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="text-center mb-5">
-                        <div className="text-xs text-[#8AA8C0] mb-1">Till Number</div>
-                        <div className="text-3xl font-black text-[#1A4A7A] tracking-widest">{TILL_NUMBER}</div>
-                    </div>
-                    <label className="block text-sm font-semibold text-[#2A4A6A] mb-1.5">Enter M-Pesa transaction code <span className="text-red-400">*</span></label>
-                    <input value={transactionCode} onChange={e => setTransactionCode(e.target.value.toUpperCase())} placeholder="e.g. QWE1R2T3YU"
-                        className="w-full px-4 py-3 bg-white border border-[#C4DDEF] rounded-xl text-[#0D2A47] placeholder:text-[#A8C0D4] focus:outline-none focus:ring-2 focus:ring-[#1A78C2] text-sm font-mono tracking-widest mb-4"
-                    />
-                    <button type="button" onClick={handleTillSubmit} disabled={submitting || !transactionCode.trim()}
-                        className="w-full py-3.5 rounded-xl bg-[#1A4A7A] text-white font-semibold hover:bg-[#0D2A47] transition-all shadow-lg shadow-[#1A4A7A]/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        {submitting && <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg>}
-                        I have paid — confirm order
-                    </button>
                 </SectionCard>
             )}
 
@@ -337,7 +293,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
             )}
 
             {/* Global error */}
-            {error && method !== 'mpesa-stk' && (
+            {error && method === 'card' && (
                 <div className="bg-[#FEF0F0] border border-[#F5AAAA] rounded-xl px-4 py-3 text-sm text-red-600">{error}</div>
             )}
 

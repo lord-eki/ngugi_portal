@@ -2,31 +2,39 @@
 
 namespace App\Services;
 
+use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class MpesaService
 {
-   
 
-    
+
+
 
     public function accessToken(): string
     {
-        $baseUrl = config('services.mpesa.base_url');
+        return Cache::remember('mpesa_access_token', 3500, function () {
+            $baseUrl = config('services.mpesa.base_url');
 
-        $response = Http::withBasicAuth(config('services.mpesa.consumer_key'), config('services.mpesa.consumer_secret'))->get($baseUrl . '/oauth/v1/generate?grant_type=client_credentials');
+            $response = Http::withBasicAuth(
+                config('services.mpesa.consumer_key'),
+                config('services.mpesa.consumer_secret')
+            )->get($baseUrl . '/oauth/v1/generate?grant_type=client_credentials');
 
-        if ($response->failed()) {
-            Log::error('Mpesa OAuth failed', ['response' => $response->json()]);
+            if ($response->failed()) {
+                Log::error('Mpesa OAuth failed', ['response' => $response->json()]);
+                throw new RuntimeException('Unable to authenticate with Mpesa');
+            }
 
-            throw new RuntimeException('Unable to authenticate with Mpesa');
-        }
-
-        return $response->json('access_token');
+            return $response->json('access_token');
+        });
     }
+
 
 
     public function registerUrls(): array
@@ -47,24 +55,41 @@ class MpesaService
         return $response->json();
     }
 
-
-    public function c2b($amount,$msisdn ,$billrefnumber)
+    public function stkPush(Payment $payment, string $phone, float $amount): array
     {
-        $response = Http::withToken($this->accessToken())->post(config('services.mpesa.base_url') . '/mpesa/c2b/v2/simulate', [
-            'ShortCode' => config('services.mpesa.shortcode'),
-            'CommandID' => 'CustomerBuyGoodsOnline',
-            'Amount' => $amount,
-            'Msisdn' => $msisdn,
-            'BillRefNumber' => $billrefnumber,
-        ]);
+        $shortcode = config('services.mpesa.shortcode');
+        $timestamp = now()->format('YmdHis');
+        $password  = base64_encode($shortcode . config('services.mpesa.passkey') . $timestamp);
+
+        $response = Http::withToken($this->accessToken())
+            ->post(config('services.mpesa.base_url') . '/mpesa/stkpush/v1/processrequest', [
+                'BusinessShortCode' => $shortcode,
+                'Password'          => $password,
+                'Timestamp'         => $timestamp,
+                'TransactionType'   => 'CustomerBuyGoodsOnline',
+                'Amount'            => (int) round($amount),
+                'PartyA'            => $phone,
+                'PartyB'            => $shortcode,
+                'PhoneNumber'       => $phone,
+                'CallBackURL'       => config('services.mpesa.stk_callback_url'),
+                'AccountReference'  => (string) $payment->id,
+                'TransactionDesc'   => 'Water order payment #' . $payment->order_id,
+            ]);
 
         if ($response->failed()) {
-            Log::error('Mpesa C2B simulation failed', ['response' => $response->json()]);
-
-            throw new RuntimeException($response->json('errorMessage', 'Unable to simulate Mpesa C2B payment'));
+            Log::error('Mpesa STK push failed', ['response' => $response->json()]);
+            throw new RuntimeException($response->json('errorMessage', 'Unable to initiate Mpesa payment'));
         }
 
-        return $response->json();
+        $data = $response->json();
+
+        $payment->update([
+            'merchant_request_id' => $data['MerchantRequestID'] ?? null,
+            'checkout_request_id' => $data['CheckoutRequestID'] ?? null,
+            'status'              => 'pending',
+        ]);
+
+        return $data;
     }
 
     public function validateURL(Request $request)
@@ -77,12 +102,59 @@ class MpesaService
         ]);
     }
 
-    public function confirmURL(Request $request)
+
+    public function handleStkCallback(Request $request): void
     {
-        Log::info('M-Pesa Confirmation:', $request->all());
+        Log::info('M-Pesa STK Callback:', $request->all());
 
-        //STORE IN THE DB
+        $stkCallback = $request->input('Body.stkCallback');
+        if (!$stkCallback) {
+            Log::warning('Malformed STK callback payload', $request->all());
+            return;
+        }
+
+        $checkoutRequestId = $stkCallback['CheckoutRequestID'] ?? null;
+        $resultCode        = $stkCallback['ResultCode'] ?? null;
+        $resultDesc        = $stkCallback['ResultDesc'] ?? null;
+
+        if (!$checkoutRequestId) {
+            return;
+        }
+
+        DB::transaction(function () use ($checkoutRequestId, $resultCode, $resultDesc, $stkCallback) {
+            $payment = Payment::where('checkout_request_id', $checkoutRequestId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$payment) {
+                Log::warning('STK callback for unknown CheckoutRequestID', ['id' => $checkoutRequestId]);
+                return;
+            }
+
+            if ($payment->status !== 'pending') {
+                return;
+            }
+
+            if ((int) $resultCode !== 0) {
+                $payment->update([
+                    'status'              => 'failed',
+                    'result_code'         => $resultCode,
+                    'result_description'  => $resultDesc,
+                ]);
+                return;
+            }
+
+            $metadata = collect($stkCallback['CallbackMetadata']['Item'] ?? [])
+                ->pluck('Value', 'Name');
+
+            $payment->update([
+                'status'               => 'paid',
+                'result_code'          => $resultCode,
+                'result_description'   => $resultDesc,
+                'mpesa_receipt_number' => $metadata->get('MpesaReceiptNumber'),
+            ]);
+
+            $payment->order()->update(['status' => 'confirmed']);
+        });
     }
-
-  
 }

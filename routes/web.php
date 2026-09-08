@@ -16,12 +16,10 @@ Route::resource('orders', OrderController::class);
 Route::get('/orders/{order}/payment-status', [OrderController::class, 'paymentStatus'])
     ->name('orders.payment-status');
 
-Route::get('/access-token', [MpesaController::class, 'accessToken']);
-Route::post('/register-urls', [MpesaController::class, 'registerUrls']);
-Route::post('/validation', [MpesaController::class, 'validateURL'])
-    ->name('validation');
-Route::post('/confirmation', [MpesaController::class, 'confirmURL'])
-    ->name('confirmation');
+Route::post('/mpesa/register-urls', [MpesaController::class, 'registerUrls']); 
+Route::post('/mpesa/stk', [MpesaController::class, 'stkPush']);
+Route::post('/mpesa/validate', [MpesaController::class, 'validateURL']);   
+Route::post('/mpesa/stk/callback', [MpesaController::class, 'stkCallback']); 
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
