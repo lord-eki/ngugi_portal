@@ -14,6 +14,7 @@ interface DeliveryInfo {
     contact_name: string | null; contact_phone: string | null;
     recepient_name: string | null; recepient_phone: string | null;
     schedule_label: string; notes: string | null;
+    rider?: { id: number; name: string } | null;
 }
 interface PaymentInfo {
     method: string; method_label: string; status: string;
@@ -36,48 +37,58 @@ interface Subscription {
 interface Stats {
     totalOrders: number; totalSpent: number; activeOrders: number; deliveredCount: number;
 }
+interface Rider { id: number; name: string }
+
 interface Props {
     stats: Stats;
     orders: { data: Order[]; last_page: number; current_page: number };
     subscriptions: Subscription[];
+    riders?: Rider[];
 }
 
 // ── Style maps ─────────────────────────────────────────────────────
 const S_STYLE: Record<string, { dot: string; badge: string }> = {
-    pending:          { dot: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-800 border-amber-200' },
-    confirmed:        { dot: 'bg-[#1A78C2]',  badge: 'bg-[#DDEEFF] text-[#1A4A7A] border-[#B8D4EC]' },
+    pending: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-800 border-amber-200' },
+    confirmed: { dot: 'bg-[#1A78C2]', badge: 'bg-[#DDEEFF] text-[#1A4A7A] border-[#B8D4EC]' },
     out_for_delivery: { dot: 'bg-orange-400', badge: 'bg-orange-50 text-orange-800 border-orange-200' },
-    delivered:        { dot: 'bg-green-500',  badge: 'bg-green-50 text-green-800 border-green-200' },
-    cancelled:        { dot: 'bg-red-400',    badge: 'bg-red-50 text-red-700 border-red-200' },
+    delivered: { dot: 'bg-green-500', badge: 'bg-green-50 text-green-800 border-green-200' },
+    cancelled: { dot: 'bg-red-400', badge: 'bg-red-50 text-red-700 border-red-200' },
 };
 const PAY_STYLE: Record<string, string> = {
-    pending:  'bg-amber-50 text-amber-800 border-amber-200',
+    pending: 'bg-amber-50 text-amber-800 border-amber-200',
     verified: 'bg-green-50 text-green-800 border-green-200',
-    failed:   'bg-red-50 text-red-700 border-red-200',
+    failed: 'bg-red-50 text-red-700 border-red-200',
 };
 const SUB_STYLE: Record<string, { badge: string; dot: string }> = {
-    active:    { badge: 'bg-green-50 text-green-800 border-green-200',  dot: 'bg-green-500' },
-    paused:    { badge: 'bg-amber-50 text-amber-800 border-amber-200',  dot: 'bg-amber-400' },
-    cancelled: { badge: 'bg-red-50 text-red-700 border-red-200',        dot: 'bg-red-400' },
-    pending:   { badge: 'bg-[#DDEEFF] text-[#1A4A7A] border-[#B8D4EC]', dot: 'bg-[#1A78C2]' },
+    active: { badge: 'bg-green-50 text-green-800 border-green-200', dot: 'bg-green-500' },
+    paused: { badge: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-400' },
+    cancelled: { badge: 'bg-red-50 text-red-700 border-red-200', dot: 'bg-red-400' },
+    pending: { badge: 'bg-[#DDEEFF] text-[#1A4A7A] border-[#B8D4EC]', dot: 'bg-[#1A78C2]' },
 };
 
 // Order status transitions for admin
 const ORDER_STATUS_ACTIONS: Record<string, { label: string; next: string; cls: string }[]> = {
-    pending:          [
-        { label: 'Confirm',         next: 'confirmed',        cls: 'bg-[#1A4A7A] text-white hover:bg-[#0D2A47]' },
-        { label: 'Cancel',          next: 'cancelled',        cls: 'border border-red-200 text-red-600 bg-red-50 hover:bg-red-100' },
+    pending: [
+        { label: 'Confirm', next: 'confirmed', cls: 'bg-[#1A4A7A] text-white hover:bg-[#0D2A47]' },
+        { label: 'Cancel', next: 'cancelled', cls: 'border border-red-200 text-red-600 bg-red-50 hover:bg-red-100' },
     ],
-    confirmed:        [
+    confirmed: [
         { label: 'Mark Out for Delivery', next: 'out_for_delivery', cls: 'bg-orange-500 text-white hover:bg-orange-600' },
-        { label: 'Cancel',                next: 'cancelled',         cls: 'border border-red-200 text-red-600 bg-red-50 hover:bg-red-100' },
+        { label: 'Cancel', next: 'cancelled', cls: 'border border-red-200 text-red-600 bg-red-50 hover:bg-red-100' },
     ],
     out_for_delivery: [
-        { label: 'Mark Delivered',  next: 'delivered',        cls: 'bg-green-600 text-white hover:bg-green-700' },
+        { label: 'Mark Delivered', next: 'delivered', cls: 'bg-green-600 text-white hover:bg-green-700' },
     ],
-    delivered:        [],
-    cancelled:        [],
+    delivered: [],
+    cancelled: [],
 };
+
+export const RIDER_STATUS_ACTIONS: Record<string, { label: string; next: string; cls: string }[]> = {
+    pending: [], cancelled: [], delivered: [],
+    confirmed: [{ label: 'Mark Out for Delivery', next: 'out_for_delivery', cls: 'bg-orange-500 text-white hover:bg-orange-600' }],
+    out_for_delivery: [{ label: 'Mark Delivered', next: 'delivered', cls: 'bg-green-600 text-white hover:bg-green-700' }],
+};
+
 
 function fmt(n: number) { return `KES ${n.toLocaleString()}`; }
 function timeAgo(iso: string) {
@@ -129,12 +140,14 @@ function InfoRow({ label, value, mono = false, italic = false }: {
 }
 
 // ── Order card ─────────────────────────────────────────────────────
-function OrderCard({ order }: { order: Order }) {
+export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAssign = false, riders = [] }: {
+    order: Order; statusActions?: typeof ORDER_STATUS_ACTIONS; showAssign?: boolean; riders?: Rider[];
+}) {
     const [open, setOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [verifyingPayment, setVerifyingPayment] = useState(false);
     const sc = S_STYLE[order.status] ?? S_STYLE.pending;
-    const actions = ORDER_STATUS_ACTIONS[order.status] ?? [];
+    const actions = statusActions[order.status] ?? [];
 
     const handleStatusChange = (next: string) => {
         if (!confirm(`Change order #${order.id} status to "${next.replace(/_/g, ' ')}"?`)) return;
@@ -156,7 +169,7 @@ function OrderCard({ order }: { order: Order }) {
         if (!order.delivery) return null;
         const d = order.delivery;
         if (d.recepient_name) return { name: d.recepient_name, phone: d.recepient_phone };
-        if (d.contact_name)   return { name: d.contact_name,   phone: d.contact_phone };
+        if (d.contact_name) return { name: d.contact_name, phone: d.contact_phone };
         return null;
     })();
 
@@ -191,7 +204,7 @@ function OrderCard({ order }: { order: Order }) {
                     <span className="font-black text-[#1A4A7A] text-sm">{fmt(order.grand_total)}</span>
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
                         className={`text-[#8AA8C0] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
-                        <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M3 5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </div>
             </button>
@@ -208,9 +221,8 @@ function OrderCard({ order }: { order: Order }) {
                                 {order.items.map(item => (
                                     <div key={item.id} className="flex justify-between gap-2 text-sm">
                                         <div className="flex items-start gap-2 min-w-0">
-                                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0 ${
-                                                item.type === 'refill' ? 'bg-[#DDEEFF] text-[#1A4A7A]' : 'bg-green-50 text-green-700'
-                                            }`}>
+                                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0 ${item.type === 'refill' ? 'bg-[#DDEEFF] text-[#1A4A7A]' : 'bg-green-50 text-green-700'
+                                                }`}>
                                                 {item.type === 'refill' ? 'Refill' : 'New'}
                                             </span>
                                             <span className="text-[#4A6A8A] break-words">{item.size}
@@ -259,6 +271,24 @@ function OrderCard({ order }: { order: Order }) {
                                     )}
                                     <InfoRow label="When" value={order.delivery.schedule_label} />
                                     {order.delivery.notes && <InfoRow label="Note" value={order.delivery.notes} italic />}
+                                    {showAssign && (
+                                        <div className="bg-[#F5F8FC] rounded-xl p-3 border border-[#D4E8F5]">
+                                            <p className="text-[10px] text-[#8AA8C0] font-semibold mb-1.5">🏍️ Assigned rider</p>
+                                            <select
+                                                defaultValue={order.delivery.rider?.id ?? ''}
+                                                onChange={(e) => {
+                                                    const riderId = e.target.value ? Number(e.target.value) : null;
+                                                    router.post(`/orders/${order.id}/assign-rider`, { rider_id: riderId });
+                                                }}
+                                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-2 py-1.5 bg-white text-[#0D2A47]"
+                                            >
+                                                <option value="">— Unassigned —</option>
+                                                {riders.map(r => (
+                                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
                             ) : <p className="text-xs text-[#8AA8C0]">No delivery info recorded</p>}
                         </div>
@@ -361,8 +391,8 @@ function SubscriptionsTable({ subscriptions }: { subscriptions: Subscription[] }
         return (
             <div className="text-center py-16 text-[#8AA8C0] bg-white rounded-2xl border border-[#D4E8F5]">
                 <svg className="mx-auto mb-3 opacity-30" width="40" height="40" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2C12 2 5 9 5 14a7 7 0 0014 0C19 9 12 2 12 2z" stroke="currentColor" strokeWidth="1.5"/>
-                    <circle cx="12" cy="14" r="2" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M12 2C12 2 5 9 5 14a7 7 0 0014 0C19 9 12 2 12 2z" stroke="currentColor" strokeWidth="1.5" />
+                    <circle cx="12" cy="14" r="2" stroke="currentColor" strokeWidth="1.5" />
                 </svg>
                 <p className="text-sm font-medium">No subscriptions yet</p>
             </div>
@@ -375,9 +405,8 @@ function SubscriptionsTable({ subscriptions }: { subscriptions: Subscription[] }
             <div className="flex gap-1 bg-[#F5F8FC] p-1 rounded-xl border border-[#D4E8F5] w-fit flex-wrap">
                 {(['all', 'active', 'pending', 'paused', 'cancelled'] as const).map(s => (
                     <button key={s} type="button" onClick={() => setStatusFilter(s)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
-                            statusFilter === s ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]' : 'text-[#8AA8C0] hover:text-[#1A4A7A]'
-                        }`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${statusFilter === s ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]' : 'text-[#8AA8C0] hover:text-[#1A4A7A]'
+                            }`}>
                         {s} {statusCounts[s] > 0 && s !== 'all' ? `(${statusCounts[s]})` : s === 'all' ? `(${statusCounts.all})` : ''}
                     </button>
                 ))}
@@ -583,15 +612,15 @@ function AdminSubActions({ sub, loading, onAction }: {
 }
 
 // ── Main ───────────────────────────────────────────────────────────
-export default function Dashboard({ stats, orders, subscriptions }: Props) {
+export default function Dashboard({ stats, orders, subscriptions, riders = [] }: Props) {
     const [mainTab, setMainTab] = useState<'orders' | 'subscriptions'>('orders');
-    const [statusTab, setStatusTab] = useState<'all'|'active'|'delivered'|'cancelled'>('all');
+    const [statusTab, setStatusTab] = useState<'all' | 'active' | 'delivered' | 'cancelled'>('all');
     const [search, setSearch] = useState('');
     const searchRef = useRef<HTMLInputElement>(null);
 
     const filtered = useMemo(() => {
         let list = orders.data;
-        if (statusTab === 'active')    list = list.filter(o => ['pending','confirmed','out_for_delivery'].includes(o.status));
+        if (statusTab === 'active') list = list.filter(o => ['pending', 'confirmed', 'out_for_delivery'].includes(o.status));
         if (statusTab === 'delivered') list = list.filter(o => o.status === 'delivered');
         if (statusTab === 'cancelled') list = list.filter(o => o.status === 'cancelled');
         if (search.trim()) {
@@ -618,16 +647,16 @@ export default function Dashboard({ stats, orders, subscriptions }: Props) {
                 {/* ── Stats ── */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <StatCard label="Total orders" value={stats.totalOrders}
-                        icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M7 4V3a1 1 0 012 0v1M11 4V3a1 1 0 012 0v1M7 9h6M7 13h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>}
+                        icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M7 4V3a1 1 0 012 0v1M11 4V3a1 1 0 012 0v1M7 9h6M7 13h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>}
                     />
                     <StatCard label="Active" value={stats.activeOrders} sub={stats.activeOrders > 0 ? 'In progress' : 'All clear'}
-                        icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5"/><path d="M10 6v4l2.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" /><path d="M10 6v4l2.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     />
                     <StatCard label="Delivered" value={stats.deliveredCount}
-                        icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     />
                     <StatCard label="Total revenue" value={fmt(stats.totalSpent)} accent
-                        icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M2 9h16" stroke="currentColor" strokeWidth="1.5"/><circle cx="6" cy="13" r="1" fill="currentColor"/></svg>}
+                        icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M2 9h16" stroke="currentColor" strokeWidth="1.5" /><circle cx="6" cy="13" r="1" fill="currentColor" /></svg>}
                     />
                 </div>
 
@@ -635,8 +664,8 @@ export default function Dashboard({ stats, orders, subscriptions }: Props) {
                 {pendingPayments > 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3">
                         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" className="text-amber-600 flex-shrink-0">
-                            <path d="M10 3L2 17h16L10 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-                            <path d="M10 8v4M10 14.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            <path d="M10 3L2 17h16L10 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                            <path d="M10 8v4M10 14.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                         </svg>
                         <p className="text-sm text-amber-800 font-medium">
                             {pendingPayments} order{pendingPayments !== 1 ? 's' : ''} awaiting payment verification
@@ -653,11 +682,10 @@ export default function Dashboard({ stats, orders, subscriptions }: Props) {
 
                 {/* ── Main tabs ── */}
                 <div className="flex gap-1 bg-[#F5F8FC] p-1 rounded-xl border border-[#D4E8F5] w-fit">
-                    {(['orders','subscriptions'] as const).map(t => (
+                    {(['orders', 'subscriptions'] as const).map(t => (
                         <button key={t} type="button" onClick={() => setMainTab(t)}
-                            className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
-                                mainTab === t ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]' : 'text-[#8AA8C0] hover:text-[#1A4A7A]'
-                            }`}>
+                            className={`px-5 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${mainTab === t ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]' : 'text-[#8AA8C0] hover:text-[#1A4A7A]'
+                                }`}>
                             {t}
                             {t === 'subscriptions' && subscriptions.length > 0 && (
                                 <span className="ml-1.5 text-[10px] bg-[#1A4A7A] text-white rounded-full px-1.5 py-0.5">{subscriptions.length}</span>
@@ -673,8 +701,8 @@ export default function Dashboard({ stats, orders, subscriptions }: Props) {
                             <div className="relative flex-1">
                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8AA8C0]">
                                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                        <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
-                                        <path d="M10.5 10.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                                        <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+                                        <path d="M10.5 10.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                                     </svg>
                                 </div>
                                 <input
@@ -688,16 +716,15 @@ export default function Dashboard({ stats, orders, subscriptions }: Props) {
                                 {search && (
                                     <button type="button" onClick={() => setSearch('')}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8AA8C0] hover:text-[#1A4A7A]">
-                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
                                     </button>
                                 )}
                             </div>
                             <div className="flex gap-1 bg-[#F5F8FC] p-1 rounded-xl border border-[#D4E8F5] flex-shrink-0">
-                                {(['all','active','delivered','cancelled'] as const).map(t => (
+                                {(['all', 'active', 'delivered', 'cancelled'] as const).map(t => (
                                     <button key={t} type="button" onClick={() => setStatusTab(t)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
-                                            statusTab === t ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]' : 'text-[#8AA8C0] hover:text-[#1A4A7A]'
-                                        }`}>
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${statusTab === t ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]' : 'text-[#8AA8C0] hover:text-[#1A4A7A]'
+                                            }`}>
                                         {t}
                                     </button>
                                 ))}
@@ -712,13 +739,12 @@ export default function Dashboard({ stats, orders, subscriptions }: Props) {
 
                         {filtered.length > 0 ? (
                             <div className="space-y-3">
-                                {filtered.map(order => <OrderCard key={order.id} order={order} />)}
-                            </div>
+                                {filtered.map(order => <OrderCard key={order.id} order={order} showAssign riders={riders} />)}                            </div>
                         ) : (
                             <div className="text-center py-16 text-[#8AA8C0]">
                                 <svg className="mx-auto mb-3 opacity-30" width="44" height="44" viewBox="0 0 48 48" fill="none">
-                                    <path d="M24 4C24 4 10 17 10 28a14 14 0 0028 0C38 17 24 4 24 4z" stroke="currentColor" strokeWidth="2"/>
-                                    <path d="M18 30a6 6 0 0012 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                    <path d="M24 4C24 4 10 17 10 28a14 14 0 0028 0C38 17 24 4 24 4z" stroke="currentColor" strokeWidth="2" />
+                                    <path d="M18 30a6 6 0 0012 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                                 </svg>
                                 <p className="text-sm font-medium">{search ? `No orders match "${search}"` : statusTab === 'all' ? 'No orders yet' : `No ${statusTab} orders`}</p>
                             </div>
@@ -729,9 +755,8 @@ export default function Dashboard({ stats, orders, subscriptions }: Props) {
                                 {Array.from({ length: orders.last_page }, (_, i) => i + 1).map(page => (
                                     <button key={page} type="button"
                                         onClick={() => router.get('/dashboard', { page }, { preserveState: true })}
-                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                                            page === orders.current_page ? 'bg-[#1A4A7A] text-white' : 'bg-white border border-[#D4E8F5] text-[#4A6A8A] hover:border-[#1A4A7A]'
-                                        }`}>
+                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${page === orders.current_page ? 'bg-[#1A4A7A] text-white' : 'bg-white border border-[#D4E8F5] text-[#4A6A8A] hover:border-[#1A4A7A]'
+                                            }`}>
                                         {page}
                                     </button>
                                 ))}

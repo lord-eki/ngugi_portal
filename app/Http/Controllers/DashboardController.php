@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Subscription;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -16,7 +17,7 @@ class DashboardController extends Controller
         if (Auth::user()->isRider()) {
             return redirect()->route('rider.dashboard');
         }
-       
+
 
         $stats = [
             'totalOrders'    => Order::count(),
@@ -28,7 +29,7 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
-        $orders = Order::with(['orderItems', 'charges', 'delivery', 'payment'])
+        $orders = Order::with(['orderItems', 'charges', 'delivery.rider', 'payment'])
             ->latest()
             ->paginate(10)
             ->through(fn(Order $order) => [
@@ -67,6 +68,10 @@ class DashboardController extends Controller
                     'recepient_phone' => $order->delivery->recepient_phone,
                     'schedule_label' => $order->delivery->schedule_label,
                     'notes'          => $order->delivery->notes,
+                    'rider'           => $order->delivery->rider ? [
+                        'id'   => $order->delivery->rider->id,
+                        'name' => $order->delivery->rider->name,
+                    ] : null,
                 ] : null,
 
                 'payment' => $order->payment ? [
@@ -94,6 +99,8 @@ class DashboardController extends Controller
             'stats'         => $stats,
             'orders'        => $orders,
             'subscriptions' => $subscriptions,
+            'riders'        => User::where('role', 'rider')->get(['id', 'name']), 
+
         ]);
     }
 }

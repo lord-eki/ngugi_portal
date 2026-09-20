@@ -29,6 +29,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('/orders/{order}/status', [OrderController::class, 'updateOrderStatus'])
         ->name('orders.status');
+        
+    Route::post('/orders/{order}/assign-rider', [OrderController::class, 'assignRider'])
+        ->middleware('role:admin')
+        ->name('orders.assign-rider');
 
     Route::post('/orders/{order}/verify-payment', [OrderController::class, 'verifyPayment'])
         ->name('orders.verify-payment');

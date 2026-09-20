@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Orders\AssignRiderAction;
 use App\Actions\Orders\CancelOrderAction;
 use App\Actions\Orders\CreateOrderAction;
 use App\Actions\Orders\PaymentStatusAction;
@@ -15,36 +16,38 @@ use Illuminate\Support\Facades\Log;
 class OrderController extends Controller
 {
 
-    public function store(Request $request , CreateOrderAction $createOrderAction)
-    
+    public function store(Request $request, CreateOrderAction $createOrderAction)
+
     {
         Log::info($request);
         return $createOrderAction->handle($request->all());
-
     }
 
-     public function updateOrderStatus(Order $order, Request $request , UpdateOrderStatus $action): RedirectResponse
+    public function updateOrderStatus(Order $order, Request $request, UpdateOrderStatus $action): RedirectResponse
     {
-        return $action->handle($request,$order);
+        return $action->handle($request, $order);
     }
 
-    public function cancel(Order $order , CancelOrderAction $action): RedirectResponse
-    {
-        return $action->handle($order);
-        
-    }
-
-    public function verifyPayment(Order $order , VerifyPaymentAction $action): RedirectResponse
-    {
-
-    return $action->handle($order);
-       
-    }
-
-    public function paymentStatus(Order $order , PaymentStatusAction $action) 
+    public function cancel(Order $order, CancelOrderAction $action): RedirectResponse
     {
         return $action->handle($order);
     }
 
-   
+    public function verifyPayment(Order $order, VerifyPaymentAction $action): RedirectResponse
+    {
+
+        return $action->handle($order);
+    }
+
+    public function paymentStatus(Order $order, PaymentStatusAction $action)
+    {
+        return $action->handle($order);
+    }
+
+    public function assignRider(Order $order, Request $request, AssignRiderAction $action): RedirectResponse
+    {
+        $data = $request->validate(['rider_id' => ['nullable', 'exists:users,id']]);
+
+        return $action->handle($order, $data['rider_id'] ?? null);
+    }
 }
