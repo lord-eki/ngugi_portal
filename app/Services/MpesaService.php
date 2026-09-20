@@ -3,85 +3,49 @@
 namespace App\Services;
 
 use App\Models\Payment;
+use Iankumu\Mpesa\Facades\Mpesa;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class MpesaService
 {
-
-
-
-
-    public function accessToken(): string
-    {
-        return Cache::remember('mpesa_access_token', 3500, function () {
-            $baseUrl = config('services.mpesa.base_url');
-
-            $response = Http::withBasicAuth(
-                config('services.mpesa.consumer_key'),
-                config('services.mpesa.consumer_secret')
-            )->get($baseUrl . '/oauth/v1/generate?grant_type=client_credentials');
-
-            if ($response->failed()) {
-                Log::error('Mpesa OAuth failed', ['response' => $response->json()]);
-                throw new RuntimeException('Unable to authenticate with Mpesa');
-            }
-
-            return $response->json('access_token');
-        });
-    }
-
-
-
     public function registerUrls(): array
     {
-        $response = Http::withToken($this->accessToken())->post(config('services.mpesa.base_url') . '/mpesa/c2b/v2/registerurl', [
-            'ShortCode' => config('services.mpesa.shortcode'),
-            'ResponseType' => 'Completed',
-            'ConfirmationURL' => config('services.mpesa.confirmation_url'),
-            'ValidationURL' => config('services.mpesa.validation_url'),
-        ]);
+        $response = Mpesa::c2bregisterURLS(
+            config('mpesa.till_number'),
+            config('mpesa.callbacks.c2b_confirmation_url'),
+            config('mpesa.callbacks.c2b_validation_url'),
+            'C2B'
+        );
+
+        $result = $response->json();
 
         if ($response->failed()) {
-            Log::error('Mpesa URL registration failed', ['response' => $response->json()]);
-
-            throw new RuntimeException($response->json('errorMessage', 'Unable to register Mpesa URLs'));
+            Log::error('Mpesa URL registration failed', ['response' => $result]);
+            throw new RuntimeException($result['errorMessage'] ?? 'Unable to register Mpesa URLs');
         }
 
-        return $response->json();
+        return $result;
     }
 
     public function stkPush(Payment $payment, string $phone, float $amount): array
     {
-        $shortcode = config('services.mpesa.shortcode');
-        $timestamp = now()->format('YmdHis');
-        $password  = base64_encode($shortcode . config('services.mpesa.passkey') . $timestamp);
-
-        $response = Http::withToken($this->accessToken())
-            ->post(config('services.mpesa.base_url') . '/mpesa/stkpush/v1/processrequest', [
-                'BusinessShortCode' => $shortcode,
-                'Password'          => $password,
-                'Timestamp'         => $timestamp,
-                'TransactionType'   => 'CustomerBuyGoodsOnline',
-                'Amount'            => (int) round($amount),
-                'PartyA'            => $phone,
-                'PartyB'            => $shortcode,
-                'PhoneNumber'       => $phone,
-                'CallBackURL'       => config('services.mpesa.stk_callback_url'),
-                'AccountReference'  => (string) $payment->id,
-                'TransactionDesc'   => 'Water order payment #' . $payment->order_id,
-            ]);
-
-        if ($response->failed()) {
-            Log::error('Mpesa STK push failed', ['response' => $response->json()]);
-            throw new RuntimeException($response->json('errorMessage', 'Unable to initiate Mpesa payment'));
-        }
+        $response = Mpesa::stkpush(
+            $phone,
+            (int) round($amount),
+            (string) $payment->id,                          
+            config('mpesa.callbacks.callback_url'),
+            Mpesa::TILL                                      
+        );
 
         $data = $response->json();
+
+        if ($response->failed() || ($data['ResponseCode'] ?? null) !== '0') {
+            Log::error('Mpesa STK push failed', ['response' => $data]);
+            throw new RuntimeException($data['errorMessage'] ?? 'Unable to initiate Mpesa payment');
+        }
 
         $payment->update([
             'merchant_request_id' => $data['MerchantRequestID'] ?? null,
@@ -97,11 +61,10 @@ class MpesaService
         Log::info('M-Pesa Validation:', $request->all());
 
         return response()->json([
-            "ResultCode" => "0",
-            "ResultDesc" => "Accepted"
+            'ResultCode' => '0',
+            'ResultDesc' => 'Accepted',
         ]);
     }
-
 
     public function handleStkCallback(Request $request): void
     {
@@ -126,20 +89,15 @@ class MpesaService
                 ->lockForUpdate()
                 ->first();
 
-            if (!$payment) {
-                Log::warning('STK callback for unknown CheckoutRequestID', ['id' => $checkoutRequestId]);
-                return;
-            }
-
-            if ($payment->status !== 'pending') {
+            if (!$payment || $payment->status !== 'pending') {
                 return;
             }
 
             if ((int) $resultCode !== 0) {
                 $payment->update([
-                    'status'              => 'failed',
-                    'result_code'         => $resultCode,
-                    'result_description'  => $resultDesc,
+                    'status'             => 'failed',
+                    'result_code'        => $resultCode,
+                    'result_description' => $resultDesc,
                 ]);
                 return;
             }

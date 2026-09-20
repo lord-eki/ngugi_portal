@@ -13,22 +13,25 @@ class DashboardController extends Controller
 {
     public function index(): Response
     {
-        $userId = Auth::id();
+        if (Auth::user()->isRider()) {
+            return redirect()->route('rider.dashboard');
+        }
+       
 
         $stats = [
             'totalOrders'    => Order::count(),
             'totalSpent'     => Order::whereIn('status', ['confirmed', 'out_for_delivery', 'delivered'])
-                                    ->sum('grand_total'),
+                ->sum('grand_total'),
             'activeOrders'   => Order::whereIn('status', ['pending', 'confirmed', 'out_for_delivery'])
-                                    ->count(),
+                ->count(),
             'deliveredCount' => Order::where('status', 'delivered')
-                                    ->count(),
+                ->count(),
         ];
 
         $orders = Order::with(['orderItems', 'charges', 'delivery', 'payment'])
             ->latest()
             ->paginate(10)
-            ->through(fn (Order $order) => [
+            ->through(fn(Order $order) => [
                 'id'             => $order->id,
                 'delivery_speed' => $order->delivery_speed,
                 'status'         => $order->status ?? 'pending',
@@ -37,7 +40,7 @@ class DashboardController extends Controller
                 'can_cancel'     => $order->canBeCancelled(),
                 'created_at'     => $order->created_at->toISOString(),
 
-                'items' => $order->orderItems->map(fn ($item) => [
+                'items' => $order->orderItems->map(fn($item) => [
                     'id'              => $item->id,
                     'type'            => $item->type,
                     'size'            => $item->size,
@@ -49,7 +52,7 @@ class DashboardController extends Controller
                     'label'           => $item->label,
                 ]),
 
-                'charges' => $order->charges->map(fn ($c) => [
+                'charges' => $order->charges->map(fn($c) => [
                     'id'     => $c->id,
                     'label'  => $c->label,
                     'amount' => (int) $c->amount,
@@ -57,12 +60,12 @@ class DashboardController extends Controller
 
                 'delivery' => $order->delivery ? [
                     'location_mode'  => $order->delivery->location_mode,
-                    'address'        => $order->delivery->address,          
+                    'address'        => $order->delivery->address,
                     'contact_name'   => $order->delivery->contact_name ?? null,
                     'contact_phone'  => $order->delivery->contact_phone ?? null,
                     'recepient_name'  => $order->delivery->recepient_name,
                     'recepient_phone' => $order->delivery->recepient_phone,
-                    'schedule_label' => $order->delivery->schedule_label,   
+                    'schedule_label' => $order->delivery->schedule_label,
                     'notes'          => $order->delivery->notes,
                 ] : null,
 
@@ -76,7 +79,7 @@ class DashboardController extends Controller
             ]);
 
         $subscriptions = Subscription::latest()->get()
-            ->map(fn (Subscription $sub) => [
+            ->map(fn(Subscription $sub) => [
                 'id'               => $sub->id,
                 'frequency'        => $sub->frequency,
                 'frequency_label'  => $sub->frequency_label,
@@ -93,6 +96,4 @@ class DashboardController extends Controller
             'subscriptions' => $subscriptions,
         ]);
     }
-
-    
 }
