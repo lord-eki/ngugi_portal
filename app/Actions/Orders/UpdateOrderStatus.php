@@ -2,6 +2,7 @@
 
 namespace App\Actions\Orders;
 
+use App\Actions\Riders\RecordRiderEarningAction;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,6 +34,10 @@ class UpdateOrderStatus
         }
 
         $order->update(['status' => $data['status']]);
+
+        if ($data['status'] === 'delivered') {
+            app(RecordRiderEarningAction::class)->handle($order);
+        }
 
         return back()->with('success', 'Order status updated.');
     }

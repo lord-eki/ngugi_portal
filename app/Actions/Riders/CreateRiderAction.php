@@ -13,11 +13,12 @@ class CreateRiderAction
         $password = Str::password(12);
 
         $rider = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
-            'phone'    => $data['phone'],
+            'name'  => $data['name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'commission_percentage' => $data['commission_percentage'] ?? null,
             'password' => $password,
-            'role'     => 'rider',
+            'role'  => 'rider',
         ]);
 
 

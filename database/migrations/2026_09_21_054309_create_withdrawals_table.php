@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('withdrawals', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('rider_id')->constrained('users')->cascadeOnDelete();
+            $table->unsignedInteger('amount');
+            $table->string('phone');
+            $table->string('status')->default('processing'); 
+            $table->string('originator_conversation_id')->nullable();
+            $table->string('conversation_id')->nullable()->index();
+            $table->string('mpesa_receipt')->nullable();
+            $table->string('result_description')->nullable();
+            $table->timestamps();
+        });
+    }
+
+  
+};

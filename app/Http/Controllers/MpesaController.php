@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Riders\HandleB2CResultAction;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -31,7 +32,7 @@ class MpesaController extends Controller
     {
         $validated = $request->validate([
             'payment_id' => ['required', 'exists:payments,id'],
-            'phone'      => ['required', 'regex:/^2547\d{8}$/'], // 2547XXXXXXXX
+            'phone'      => ['required', 'regex:/^2547\d{8}$/'], 
         ]);
 
         $payment = Payment::findOrFail($validated['payment_id']);
@@ -53,5 +54,15 @@ class MpesaController extends Controller
         return $this->mpesaService->validateURL($request);
     }
 
-  
+    public function b2cResult(Request $request, HandleB2CResultAction $action)
+    {
+        $action->handle($request);
+        return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
+    }
+
+    public function b2cTimeout(Request $request, HandleB2CResultAction $action)
+    {
+        $action->handleTimeout($request);
+        return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
+    }
 }

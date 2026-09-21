@@ -6,6 +6,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\Rider\DashboardController as RiderDashboardController;
+use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -23,16 +24,23 @@ Route::post('/mpesa/stk', [MpesaController::class, 'stkPush']);
 Route::post('/mpesa/validate', [MpesaController::class, 'validateURL']);
 Route::post('/mpesa/stk/callback', [MpesaController::class, 'stkCallback']);
 
+Route::post('/mpesa/b2c/result', [MpesaController::class, 'b2cResult']);
+Route::post('/mpesa/b2c/timeout', [MpesaController::class, 'b2cTimeout']);
+
 Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::post('/orders/{order}/status', [OrderController::class, 'updateOrderStatus'])
         ->name('orders.status');
-        
+
     Route::post('/orders/{order}/assign-rider', [OrderController::class, 'assignRider'])
         ->middleware('role:admin')
         ->name('orders.assign-rider');
+
+    Route::middleware('role:rider')->group(function () {
+        Route::post('/rider/withdrawals', [WithdrawalController::class, 'store'])->name('rider.withdrawals.store');
+    });
 
     Route::post('/orders/{order}/verify-payment', [OrderController::class, 'verifyPayment'])
         ->name('orders.verify-payment');

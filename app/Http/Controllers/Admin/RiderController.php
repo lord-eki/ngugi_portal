@@ -27,6 +27,7 @@ class RiderController extends Controller
             'name'  => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['required', 'regex:/^2547\d{8}$/'],
+            'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         $result = $action->handle($validated);
