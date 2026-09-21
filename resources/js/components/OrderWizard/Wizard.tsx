@@ -18,10 +18,12 @@ export interface DeliveryData {
     pinLocation: { lat: number; lng: number } | null;
     pinAddress: string;
     manualAddress: string;
-    contactName:string,
-    contactPhone:string,
+    contactName:string;
+    contactPhone:string;
+    contactEmail: string;
     recipientName: string;
     recipientPhone: string;
+    recipientEmail: string;
     scheduleType: 'asap' | 'later' | 'next-day';
     scheduledTime: string;
     notes: string;

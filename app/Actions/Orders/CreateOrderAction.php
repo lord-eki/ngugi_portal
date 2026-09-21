@@ -156,10 +156,12 @@ class CreateOrderAction
                 'manual_address'  => $data['delivery']['pinAddress'],
                 'recepient_name'  => $data['delivery']['recipientName'],
                 'recepient_phone' => $data['delivery']['recipientPhone'],
+                'recepient_email' => $data['delivery']['recipientEmail'] ?? null, 
                 'schedule_type'   => $data['delivery']['scheduleType'],
                 'scheduled_time'  => $data['delivery']['scheduledTime'],
                 'contact_name'    => $data['delivery']['contactName'] ?? null,
                 'contact_phone'   => $data['delivery']['contactPhone'] ?? null,
+                'contact_email'   => $data['delivery']['contactEmail'] ?? null, 
                 'notes'           => $data['delivery']['notes'],
             ]);
 

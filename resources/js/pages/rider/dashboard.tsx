@@ -31,12 +31,16 @@ interface Order {
 
 function RiderOrderCard({ order }: { order: Order }) {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [deliveryCode, setDeliveryCode] = useState('');
+    const [codeError, setCodeError] = useState<string | null>(null);
     const actions = RIDER_STATUS_ACTIONS[order.status] ?? [];
 
-    const handleStatusChange = (next: string) => {
+    const handleStatusChange = (next: string, extra: Record<string, string> = {}) => {
         setActionLoading(next);
-        router.post(`/orders/${order.id}/status`, { status: next }, {
+        setCodeError(null);
+        router.post(`/orders/${order.id}/status`, { status: next, ...extra }, {
             preserveScroll: true,
+            onError: (errors) => setCodeError(errors.status ?? 'Incorrect code'),
             onFinish: () => setActionLoading(null),
         });
     };
@@ -65,20 +69,37 @@ function RiderOrderCard({ order }: { order: Order }) {
                 )}
             </div>
 
-            {actions.length > 0 && (
-                <div className="flex gap-2">
-                    {actions.map(action => (
-                        <button
-                            key={action.next}
-                            type="button"
-                            onClick={() => handleStatusChange(action.next)}
-                            disabled={actionLoading !== null}
-                            className={`flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 ${action.cls}`}
-                        >
-                            {actionLoading === action.next ? 'Updating…' : action.label}
-                        </button>
-                    ))}
+            {order.status === 'out_for_delivery' ? (
+                <div className="space-y-2">
+                    <input
+                        value={deliveryCode}
+                        onChange={e => setDeliveryCode(e.target.value)}
+                        placeholder="Ask customer for their 4-digit code"
+                        maxLength={4}
+                        className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2 tracking-widest"
+                    />
+                    {codeError && <p className="text-xs text-red-600">{codeError}</p>}
+                    <button
+                        type="button"
+                        onClick={() => handleStatusChange('delivered', { delivery_code: deliveryCode })}
+                        disabled={actionLoading !== null || deliveryCode.length !== 4}
+                        className="w-full py-2 rounded-xl bg-green-600 text-white text-xs font-semibold disabled:opacity-50"
+                    >
+                        {actionLoading === 'delivered' ? 'Confirming…' : 'Confirm Delivered'}
+                    </button>
                 </div>
+            ) : (
+                actions.length > 0 && (
+                    <div className="flex gap-2">
+                        {actions.map(action => (
+                            <button key={action.next} type="button" onClick={() => handleStatusChange(action.next)}
+                                disabled={actionLoading !== null}
+                                className={`flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 ${action.cls}`}>
+                                {actionLoading === action.next ? 'Updating…' : action.label}
+                            </button>
+                        ))}
+                    </div>
+                )
             )}
         </div>
     );

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Riders;
 
+use App\Models\RefillerPayout;
 use App\Models\RiderEarning;
 use App\Models\Withdrawal;
 use Illuminate\Http\Request;
@@ -15,49 +16,60 @@ class HandleB2CResultAction
         Log::info('Mpesa B2C Result:', $request->all());
 
         $result = $request->input('Result');
-        if (! $result) {
-            return;
-        }
+        if (! $result) return;
 
         $conversationId = $result['ConversationID'] ?? null;
         $resultCode     = $result['ResultCode'] ?? null;
+        if (! $conversationId) return;
 
-        if (! $conversationId) {
+        DB::transaction(function () use ($conversationId, $resultCode, $result) {
+            $withdrawal = Withdrawal::where('conversation_id', $conversationId)->lockForUpdate()->first();
+            if ($withdrawal) {
+                $this->resolveWithdrawal($withdrawal, $resultCode, $result);
+                return;
+            }
+
+            $payout = RefillerPayout::where('conversation_id', $conversationId)->lockForUpdate()->first();
+            if ($payout) {
+                $this->resolvePayout($payout, $resultCode, $result);
+            }
+        });
+    }
+
+    private function resolveWithdrawal(Withdrawal $withdrawal, $resultCode, array $result): void
+    {
+        if ($withdrawal->status !== 'processing') return;
+
+        if ((int) $resultCode !== 0) {
+            $withdrawal->update(['status' => 'failed', 'result_description' => $result['ResultDesc'] ?? null]);
+            RiderEarning::where('withdrawal_id', $withdrawal->id)->update(['status' => 'available', 'withdrawal_id' => null]);
             return;
         }
 
-        DB::transaction(function () use ($conversationId, $resultCode, $result) {
-            $withdrawal = Withdrawal::where('conversation_id', $conversationId)
-                ->lockForUpdate()
-                ->first();
+        $params = collect($result['ResultParameters']['ResultParameter'] ?? [])->pluck('Value', 'Key');
+        $withdrawal->update([
+            'status' => 'completed',
+            'mpesa_receipt' => $params->get('TransactionReceipt'),
+            'result_description' => $result['ResultDesc'] ?? null,
+        ]);
+        RiderEarning::where('withdrawal_id', $withdrawal->id)->update(['status' => 'withdrawn']);
+    }
 
-            if (! $withdrawal || $withdrawal->status !== 'processing') {
-                return;
-            }
+    private function resolvePayout(RefillerPayout $payout, $resultCode, array $result): void
+    {
+        if ($payout->status !== 'processing') return;
 
-            if ((int) $resultCode !== 0) {
-                $withdrawal->update([
-                    'status' => 'failed',
-                    'result_description' => $result['ResultDesc'] ?? null,
-                ]);
+        if ((int) $resultCode !== 0) {
+            $payout->update(['status' => 'failed', 'result_description' => $result['ResultDesc'] ?? null]);
+            return;
+        }
 
-                RiderEarning::where('withdrawal_id', $withdrawal->id)
-                    ->update(['status' => 'available', 'withdrawal_id' => null]);
-
-                return;
-            }
-
-            $params = collect($result['ResultParameters']['ResultParameter'] ?? [])
-                ->pluck('Value', 'Key');
-
-            $withdrawal->update([
-                'status'             => 'completed',
-                'mpesa_receipt'      => $params->get('TransactionReceipt'),
-                'result_description' => $result['ResultDesc'] ?? null,
-            ]);
-
-            RiderEarning::where('withdrawal_id', $withdrawal->id)->update(['status' => 'withdrawn']);
-        });
+        $params = collect($result['ResultParameters']['ResultParameter'] ?? [])->pluck('Value', 'Key');
+        $payout->update([
+            'status' => 'completed',
+            'mpesa_receipt' => $params->get('TransactionReceipt'),
+            'result_description' => $result['ResultDesc'] ?? null,
+        ]);
     }
 
     public function handleTimeout(Request $request): void

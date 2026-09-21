@@ -249,6 +249,22 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                             </div>
                         </div>
 
+                        {order.delivery?.delivery_code && order.status === 'out_for_delivery' && (
+                            <div className="bg-[#F5F8FC] rounded-xl p-3 border border-[#D4E8F5] flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] text-[#8AA8C0] font-semibold">Delivery code</p>
+                                    <p className="font-mono font-bold text-[#0D2A47]">{order.delivery.delivery_code}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => router.post(`/orders/${order.id}/resend-delivery-code`, {}, { preserveScroll: true })}
+                                    className="text-xs font-semibold text-[#1A4A7A] hover:underline"
+                                >
+                                    Resend
+                                </button>
+                            </div>
+                        )}
+
                         {/* ── Delivery ── */}
                         <div>
                             <SectionLabel>Delivery details</SectionLabel>
@@ -313,12 +329,12 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                                         <div className="space-y-2">
                                             {order.payment.method === 'mpesa-till' ? (
                                                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800">
-                                                     Waiting for M-Pesa confirmation — this updates automatically, usually within seconds.
+                                                    Waiting for M-Pesa confirmation — this updates automatically, usually within seconds.
                                                 </div>
                                             ) : (
                                                 <>
                                                     <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800">
-                                                         Awaiting manual verification by admin
+                                                        Awaiting manual verification by admin
                                                     </div>
                                                     <button
                                                         type="button"
@@ -628,7 +644,7 @@ function AdminSubActions({ sub, loading, onAction }: {
 // ── Main ───────────────────────────────────────────────────────────
 export default function Dashboard({ stats, orders, subscriptions, riders = [] }: Props) {
     const [mainTab, setMainTab] = useState<'orders' | 'subscriptions'>('orders');
-    const [statusTab, setStatusTab] = useState<'all' | 'active' | 'delivered' | 'cancelled'>('all');
+    const [statusTab, setStatusTab] = useState<'all' | 'active' | 'delivered' | 'pending' | 'cancelled'>('all');
     const [search, setSearch] = useState('');
     const [onlyUnverified, setOnlyUnverified] = useState(false);
 
@@ -638,6 +654,7 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
         let list = orders.data;
         if (statusTab === 'active') list = list.filter(o => ['pending', 'confirmed', 'out_for_delivery'].includes(o.status));
         if (statusTab === 'delivered') list = list.filter(o => o.status === 'delivered');
+        if (statusTab === 'pending') list = list.filter(o => o.status === 'pending');
         if (statusTab === 'cancelled') list = list.filter(o => o.status === 'cancelled');
         if (onlyUnverified) list = list.filter(o => o.payment?.status === 'pending');
         if (search.trim()) {
@@ -672,7 +689,7 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
                     <StatCard label="Delivered" value={stats.deliveredCount}
                         icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4L16 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     />
-                    <StatCard label="Total revenue" value={fmt(stats.totalSpent)} accent
+                    <StatCard label="Total revenue" value={fmt(stats.netRevenue)} accent
                         icon={<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M2 9h16" stroke="currentColor" strokeWidth="1.5" /><circle cx="6" cy="13" r="1" fill="currentColor" /></svg>}
                     />
                 </div>
@@ -743,7 +760,7 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
                                 )}
                             </div>
                             <div className="flex gap-1 bg-[#F5F8FC] p-1 rounded-xl border border-[#D4E8F5] flex-shrink-0">
-                                {(['all', 'active', 'delivered', 'cancelled'] as const).map(t => (
+                                {(['all', 'active', 'delivered', 'pending', 'cancelled'] as const).map(t => (
                                     <button key={t} type="button" onClick={() => setStatusTab(t)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${statusTab === t ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]' : 'text-[#8AA8C0] hover:text-[#1A4A7A]'
                                             }`}>

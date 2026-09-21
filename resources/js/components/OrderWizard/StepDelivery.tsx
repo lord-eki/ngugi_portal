@@ -179,8 +179,10 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
         manualAddress: '',
         contactName: '',
         contactPhone: '',
+        contactEmail: '',
         recipientName: '',
         recipientPhone: '',
+        recipientEmail: '',
         scheduleType: 'asap',
         scheduledTime: '',
         notes: '',
@@ -189,9 +191,12 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
     const patch = (updates: Partial<DeliveryData>) => setForm(prev => ({ ...prev, ...updates }));
 
     const isValid = (() => {
-        if (form.locationMode === 'pin') return !!form.pinLocation;
-        if (form.locationMode === 'manual') return form.manualAddress.trim().length > 5;
-        if (form.locationMode === 'someone-else') return form.manualAddress.trim().length > 5 && form.recipientName.trim().length > 0 && form.recipientPhone.trim().length >= 9;
+        if (form.locationMode === 'pin') return !!form.pinLocation && form.contactEmail.trim().length > 3;
+        if (form.locationMode === 'manual') return form.manualAddress.trim().length > 5 && form.contactEmail.trim().length > 3;
+        if (form.locationMode === 'someone-else') return form.manualAddress.trim().length > 5
+            && form.recipientName.trim().length > 0
+            && form.recipientPhone.trim().length >= 9
+            && form.recipientEmail.trim().length > 3;
         return false;
     })();
 
@@ -216,8 +221,8 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                     {locationTabs.map(tab => (
                         <button key={tab.id} type="button" onClick={() => patch({ locationMode: tab.id })}
                             className={`flex-1 py-2 px-2 rounded-lg text-xs font-semibold transition-all ${form.locationMode === tab.id
-                                    ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]'
-                                    : 'text-[#6A8AA8] hover:text-[#1A4A7A]'
+                                ? 'bg-white text-[#1A4A7A] shadow-sm border border-[#D4E8F5]'
+                                : 'text-[#6A8AA8] hover:text-[#1A4A7A]'
                                 }`}>
                             {tab.label}
                         </button>
@@ -243,6 +248,7 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                                     onChange={v => patch({ contactName: v })}
                                     placeholder="e.g. John Kamau"
                                 />
+
                                 <div>
                                     <label className="block text-sm font-semibold text-[#2A4A6A] mb-1.5">Phone</label>
                                     <div className="flex gap-1.5">
@@ -257,6 +263,15 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                                             className="flex-1 px-3 py-3 bg-white border border-[#C4DDEF] rounded-xl text-[#0D2A47] placeholder:text-[#A8C0D4] focus:outline-none focus:ring-2 focus:ring-[#1A78C2] text-sm"
                                         />
                                     </div>
+                                </div>
+                                <div className='grid-cols-1'>
+                                    <InputField
+                                        label="Your email"
+                                        value={form.contactEmail}
+                                        onChange={v => patch({ contactEmail: v })}
+                                        placeholder="e.g. jane@example.com"
+                                        required
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -304,6 +319,13 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                                         />
                                     </div>
                                 </div>
+                                <InputField
+                                    label="Your email"
+                                    value={form.contactEmail}
+                                    onChange={v => patch({ contactEmail: v })}
+                                    placeholder="e.g. jane@example.com"
+                                    required
+                                />
                             </div>
                         </div>
                     </div>
@@ -311,7 +333,7 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                 {form.locationMode === 'someone-else' && (
                     <div className="space-y-4">
                         <div className="bg-[#DDEEFF] border border-[#B8D4EC] rounded-xl px-4 py-3 text-xs text-[#1A4A7A] font-medium">
-                            We'll send this person an SMS update and contact them on arrival.
+                            We'll email this person a delivery code and contact them on arrival.
                         </div>
                         <InputField label="Recipient's full name" value={form.recipientName} onChange={v => patch({ recipientName: v })} placeholder="e.g. Jane Wanjiru" required />
                         <div>
@@ -323,6 +345,13 @@ export default function StepDelivery({ orderData, onNext, onBack }: {
                                 />
                             </div>
                         </div>
+                        <InputField
+                            label="Recipient's email"
+                            value={form.recipientEmail}
+                            onChange={v => patch({ recipientEmail: v })}
+                            placeholder="e.g. jane@example.com"
+                            required
+                        />
                         <InputField label="Their delivery address" value={form.manualAddress} onChange={v => patch({ manualAddress: v })} placeholder="e.g. Kileleshwa, Nairobi" required />
                     </div>
                 )}

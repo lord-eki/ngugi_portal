@@ -37,6 +37,11 @@ class Order extends Model
         return $this->hasOne(Payment::class);
     }
 
+    public function refiller(): BelongsTo
+    {
+        return $this->belongsTo(Refiller::class);
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {

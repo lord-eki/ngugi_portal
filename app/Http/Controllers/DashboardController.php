@@ -79,6 +79,7 @@ class DashboardController extends Controller
                         'id'   => $order->delivery->rider->id,
                         'name' => $order->delivery->rider->name,
                     ] : null,
+                    'delivery_code' => $order->delivery->delivery_code,
                 ] : null,
 
                 'payment' => $order->payment ? [
