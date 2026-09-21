@@ -106,7 +106,7 @@ class MpesaService
                 ->pluck('Value', 'Name');
 
             $payment->update([
-                'status'               => 'paid',
+                'status'               => 'verified',
                 'result_code'          => $resultCode,
                 'result_description'   => $resultDesc,
                 'mpesa_receipt_number' => $metadata->get('MpesaReceiptNumber'),

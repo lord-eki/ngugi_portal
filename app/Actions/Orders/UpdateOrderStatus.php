@@ -31,6 +31,15 @@ class UpdateOrderStatus
             abort_unless(in_array($data['status'], $allowed, true), 403, "You can't make that status change.");
         } else {
             abort_unless($user->isAdmin(), 403);
+
+            if ($data['status'] === 'out_for_delivery') {
+                $order->loadMissing('delivery');
+                abort_if(
+                    ! $order->delivery?->rider_id,
+                    422,
+                    'Assign a rider to this order before marking it out for delivery.'
+                );
+            }
         }
 
         $order->update(['status' => $data['status']]);

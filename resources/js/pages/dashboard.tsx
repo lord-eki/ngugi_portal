@@ -255,13 +255,13 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                             {order.delivery ? (
                                 <div className="space-y-2">
                                     <div className="bg-[#F5F8FC] rounded-xl p-3 border border-[#D4E8F5]">
-                                        <p className="text-[10px] text-[#8AA8C0] font-semibold mb-1">📍 Delivery address</p>
+                                        <p className="text-[10px] text-[#8AA8C0] font-semibold mb-1">Delivery address</p>
                                         <p className="text-sm font-medium text-[#0D2A47]">{order.delivery.address || '—'}</p>
                                     </div>
                                     {receiver && (
                                         <div className="bg-[#EEF6FF] rounded-xl p-3 border border-[#C4DDEF]">
                                             <p className="text-[10px] text-[#6A8AA8] font-semibold mb-1">
-                                                {order.delivery.location_mode === 'someone-else' ? '👤 Recipient' : '👤 Contact'}
+                                                {order.delivery.location_mode === 'someone-else' ? 'Recipient' : ' Contact'}
                                             </p>
                                             <p className="text-sm font-bold text-[#0D2A47]">{receiver.name}</p>
                                             {receiver.phone && (
@@ -273,7 +273,7 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                                     {order.delivery.notes && <InfoRow label="Note" value={order.delivery.notes} italic />}
                                     {showAssign && (
                                         <div className="bg-[#F5F8FC] rounded-xl p-3 border border-[#D4E8F5]">
-                                            <p className="text-[10px] text-[#8AA8C0] font-semibold mb-1.5">🏍️ Assigned rider</p>
+                                            <p className="text-[10px] text-[#8AA8C0] font-semibold mb-1.5">Assigned rider</p>
                                             <select
                                                 defaultValue={order.delivery.rider?.id ?? ''}
                                                 onChange={(e) => {
@@ -299,7 +299,7 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                             {order.payment ? (
                                 <div className="space-y-2">
                                     <div className="bg-[#F5F8FC] rounded-xl p-3 border border-[#D4E8F5]">
-                                        <p className="text-[10px] text-[#8AA8C0] font-semibold mb-1">💳 Method</p>
+                                        <p className="text-[10px] text-[#8AA8C0] font-semibold mb-1">Method</p>
                                         <p className="text-sm font-bold text-[#0D2A47]">{order.payment.method_label}</p>
                                         <span className={`mt-1 inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border ${PAY_STYLE[order.payment.status] ?? PAY_STYLE.pending}`}>
                                             {order.payment.status.charAt(0).toUpperCase() + order.payment.status.slice(1)}
@@ -311,17 +311,25 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                                     {/* Payment verification action */}
                                     {order.payment.status === 'pending' && (
                                         <div className="space-y-2">
-                                            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800">
-                                                ⏳ Awaiting manual verification by admin
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={handleVerifyPayment}
-                                                disabled={verifyingPayment}
-                                                className="w-full py-2 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
-                                            >
-                                                {verifyingPayment ? 'Verifying…' : '✓ Mark Payment Verified'}
-                                            </button>
+                                            {order.payment.method === 'mpesa-till' ? (
+                                                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800">
+                                                     Waiting for M-Pesa confirmation — this updates automatically, usually within seconds.
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800">
+                                                         Awaiting manual verification by admin
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleVerifyPayment}
+                                                        disabled={verifyingPayment}
+                                                        className="w-full py-2 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+                                                    >
+                                                        {verifyingPayment ? 'Verifying…' : '✓ Mark Payment Verified'}
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     )}
                                     {order.payment.status === 'verified' && (
@@ -338,24 +346,30 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                     {actions.length > 0 && (
                         <div className="border-t border-[#D4E8F5] pt-4">
                             <p className="text-[10px] font-bold text-[#8AA8C0] uppercase tracking-widest mb-3">Admin Actions</p>
-                            <div className="flex flex-wrap gap-2">
-                                {actions.map(action => (
+                            {actions.map(action => {
+                                const needsRider = action.next === 'out_for_delivery' && !order.delivery?.rider;
+                                return (
                                     <button
                                         key={action.next}
                                         type="button"
                                         onClick={() => handleStatusChange(action.next)}
-                                        disabled={actionLoading !== null}
+                                        disabled={actionLoading !== null || needsRider}
+                                        title={needsRider ? 'Assign a rider first' : undefined}
                                         className={`px-4 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 ${action.cls}`}
                                     >
                                         {actionLoading === action.next ? 'Updating…' : action.label}
                                     </button>
-                                ))}
-                            </div>
+                                );
+                            })}
+                            {actions.some(a => a.next === 'out_for_delivery') && !order.delivery?.rider && (
+                                <p className="text-[11px] text-[#8AA8C0] mt-2">Assign a rider above before dispatching this order.</p>
+                            )}
                         </div>
                     )}
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }
 
@@ -616,6 +630,8 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
     const [mainTab, setMainTab] = useState<'orders' | 'subscriptions'>('orders');
     const [statusTab, setStatusTab] = useState<'all' | 'active' | 'delivered' | 'cancelled'>('all');
     const [search, setSearch] = useState('');
+    const [onlyUnverified, setOnlyUnverified] = useState(false);
+
     const searchRef = useRef<HTMLInputElement>(null);
 
     const filtered = useMemo(() => {
@@ -623,6 +639,7 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
         if (statusTab === 'active') list = list.filter(o => ['pending', 'confirmed', 'out_for_delivery'].includes(o.status));
         if (statusTab === 'delivered') list = list.filter(o => o.status === 'delivered');
         if (statusTab === 'cancelled') list = list.filter(o => o.status === 'cancelled');
+        if (onlyUnverified) list = list.filter(o => o.payment?.status === 'pending');
         if (search.trim()) {
             const q = search.toLowerCase();
             list = list.filter(o =>
@@ -635,7 +652,7 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
             );
         }
         return list;
-    }, [orders.data, statusTab, search]);
+    }, [orders.data, statusTab, search, onlyUnverified]);
 
     const pendingPayments = orders.data.filter(o => o.payment?.status === 'pending').length;
 
@@ -672,7 +689,12 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
                         </p>
                         <button
                             type="button"
-                            onClick={() => { setMainTab('orders'); setStatusTab('active'); }}
+                            onClick={() => {
+                                setMainTab('orders');
+                                setStatusTab('active');
+                                setSearch('');
+                                setOnlyUnverified(true);
+                            }}
                             className="ml-auto text-xs font-semibold text-amber-700 hover:text-amber-900 underline flex-shrink-0"
                         >
                             Review →
@@ -735,6 +757,15 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
                             <p className="text-xs text-[#8AA8C0]">
                                 {filtered.length} result{filtered.length !== 1 ? 's' : ''} for "{search}"
                             </p>
+                        )}
+
+                        {onlyUnverified && (
+                            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+                                <span>Showing only orders with unverified payments</span>
+                                <button type="button" onClick={() => setOnlyUnverified(false)} className="ml-auto font-semibold underline">
+                                    Clear ✕
+                                </button>
+                            </div>
                         )}
 
                         {filtered.length > 0 ? (
