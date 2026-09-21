@@ -104,7 +104,7 @@ function MapPicker({ value, onChange, onAddressChange }: {
             });
         }
         if (value) placeMarker(value);
-    }, []);
+    }, [value]);
 
     useEffect(() => {
         if ((window as any).google?.maps) { initMap(); return; }
