@@ -1,0 +1,49 @@
+FROM dunglas/frankenphp:php8.3-bookworm
+
+WORKDIR /app
+
+RUN install-php-extensions \
+    bcmath \
+    exif \
+    gd \
+    intl \
+    mbstring \
+    pdo_mysql \
+    zip
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Node.js for Vite
+RUN apt-get update \
+    && apt-get install -y curl \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY composer.json composer.lock ./
+
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader
+
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY . .
+
+# Wayfinder now has PHP available
+RUN php artisan wayfinder:generate --with-form
+
+# Build React/Vite
+RUN npm run build
+
+RUN chown -R www-data:www-data storage bootstrap/cache
+
+ENV SERVER_NAME=:80
+
+EXPOSE 80
+
+CMD ["php", "artisan", "octane:frankenphp"]
