@@ -32,10 +32,11 @@ class RiderController extends Controller
 
         $result = $action->handle($validated);
 
-        return back()->with('rider_created', [
-            'name'     => $result['rider']->name,
-            'email'    => $result['rider']->email,
-            'password' => $result['temporary_password'],
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "Rider {$result['rider']->name} created. Temporary password: {$result['temporary_password']} — share this with them securely.",
         ]);
+
+        return back();
     }
 }
