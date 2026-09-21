@@ -23,8 +23,13 @@ class UpdateOrderStatus
             'status' => ['required', 'in:confirmed,out_for_delivery,delivered,cancelled'],
         ]);
 
+
+
         if ($user->isRider()) {
+            abort_if(! $user->is_active, 403, 'Your account has been suspended.');
+
             $order->loadMissing('delivery');
+
             abort_if($order->delivery?->rider_id !== $user->id, 403, 'This order is not assigned to you.');
 
             $allowed = self::RIDER_TRANSITIONS[$order->status] ?? [];

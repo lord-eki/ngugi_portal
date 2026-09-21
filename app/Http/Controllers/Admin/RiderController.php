@@ -64,11 +64,23 @@ class RiderController extends Controller
     {
         abort_unless($rider->isRider(), 404);
 
-        $rider->update(['is_active' => ! $rider->is_active]);
+        $activating = ! $rider->is_active;
+
+        DB::transaction(function () use ($rider, $activating) {
+            $rider->update(['is_active' => $activating]);
+
+            if (! $activating) {
+                Delivery::where('rider_id', $rider->id)
+                    ->whereHas('order', fn($q) => $q->whereNotIn('status', ['delivered', 'cancelled']))
+                    ->update(['rider_id' => null, 'assigned_at' => null]);
+            }
+        });
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $rider->is_active ? "{$rider->name} reactivated." : "{$rider->name} suspended.",
+            'message' => $activating
+                ? "{$rider->name} reactivated."
+                : "{$rider->name} suspended — their active orders were unassigned so you can reassign them.",
         ]);
 
         return back();

@@ -66,11 +66,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     ];
 
     const rightNavItems: NavItem[] = [
-        {
-            title: 'Terms & Conditions',
-            href: '',
-            icon: BookOpen,
-        },
+      
     ];
 
     return (
@@ -187,7 +183,6 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 size="icon"
                                 className="group h-9 w-9 cursor-pointer"
                             >
-                                <Search className="!size-5 opacity-80 group-hover:opacity-100" />
                             </Button>
                             <div className="ml-1 hidden gap-1 lg:flex">
                                 {rightNavItems.map((item) => (

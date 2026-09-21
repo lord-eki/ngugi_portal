@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\RiderEarning;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +27,9 @@ class DashboardController extends Controller
             'totalOrders'    => Order::count(),
             'totalSpent'     => Order::whereIn('status', ['confirmed', 'out_for_delivery', 'delivered'])
                 ->sum('grand_total'),
+            'totalRiderPayouts' => RiderEarning::sum('amount'),
+            'netRevenue'        => Order::whereIn('status', ['confirmed', 'out_for_delivery', 'delivered'])->sum('grand_total')
+                - RiderEarning::sum('amount'),
             'activeOrders'   => Order::whereIn('status', ['pending', 'confirmed', 'out_for_delivery'])
                 ->count(),
             'deliveredCount' => Order::where('status', 'delivered')
@@ -102,7 +106,7 @@ class DashboardController extends Controller
             'stats'         => $stats,
             'orders'        => $orders,
             'subscriptions' => $subscriptions,
-            'riders'        => User::where('role', 'rider')->get(['id', 'name']), 
+            'riders'        => User::where('role', 'rider')->where('is_active', true)->get(['id', 'name']),
 
         ]);
     }
