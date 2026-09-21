@@ -11,6 +11,12 @@ use RuntimeException;
 
 class MpesaService
 {
+
+    public function accessToken(): string
+    {
+        return Mpesa::generateAccessToken();
+    }
+    
     public function registerUrls(): array
     {
         $response = Mpesa::c2bregisterURLS(
@@ -35,9 +41,9 @@ class MpesaService
         $response = Mpesa::stkpush(
             $phone,
             (int) round($amount),
-            (string) $payment->id,                          
+            (string) $payment->id,
             config('mpesa.callbacks.callback_url'),
-            Mpesa::TILL                                      
+            Mpesa::TILL
         );
 
         $data = $response->json();
