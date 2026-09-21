@@ -1,12 +1,16 @@
 <?php
+// app/Http/Controllers/Admin/RiderController.php
 
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Riders\CreateRiderAction;
+use App\Actions\Riders\ResetRiderPasswordAction;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,7 +21,7 @@ class RiderController extends Controller
         return Inertia::render('admin/riders/index', [
             'riders' => User::where('role', 'rider')
                 ->latest()
-                ->get(['id', 'name', 'email', 'phone', 'created_at']),
+                ->get(['id', 'name', 'email', 'phone', 'commission_percentage', 'is_active', 'created_at']),
         ]);
     }
 
@@ -30,13 +34,65 @@ class RiderController extends Controller
             'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
-        $result = $action->handle($validated);
+        $rider = $action->handle($validated);
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => "Rider {$result['rider']->name} created. Temporary password: {$result['temporary_password']} — share this with them securely.",
+            'message' => "Rider {$rider->name} created — login details have been emailed to {$rider->email}.",
         ]);
 
         return back();
+    }
+
+    public function update(User $rider, Request $request): RedirectResponse
+    {
+        abort_unless($rider->isRider(), 404);
+
+        $validated = $request->validate([
+            'phone' => ['required', 'regex:/^2547\d{8}$/'],
+            'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $rider->update($validated);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "{$rider->name}'s details updated."]);
+
+        return back();
+    }
+
+    public function toggleStatus(User $rider): RedirectResponse
+    {
+        abort_unless($rider->isRider(), 404);
+
+        $rider->update(['is_active' => ! $rider->is_active]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $rider->is_active ? "{$rider->name} reactivated." : "{$rider->name} suspended.",
+        ]);
+
+        return back();
+    }
+
+    public function resetPassword(User $rider, ResetRiderPasswordAction $action): RedirectResponse
+    {
+        abort_unless($rider->isRider(), 404);
+
+        $action->handle($rider);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => "New password generated and emailed to {$rider->email}.",
+        ]);
+
+        return back();
+    }
+
+    public function revealPassword(User $rider): JsonResponse
+    {
+        abort_unless($rider->isRider(), 404);
+        abort_if(! $rider->password_encrypted, 404);
+
+        return response()->json(['password' => Crypt::decryptString($rider->password_encrypted)]);
     }
 }

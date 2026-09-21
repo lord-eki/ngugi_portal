@@ -3,7 +3,9 @@
 namespace App\Actions\Riders;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class CreateRiderAction
@@ -21,7 +23,10 @@ class CreateRiderAction
             'role'  => 'rider',
         ]);
 
+        $rider->forceFill(['password_encrypted' => Crypt::encryptString($password)])->save();
+        Mail::to($rider->email)->queue(new RiderWelcomeMail($rider,$password));
 
-        return ['rider' => $rider, 'temporary_password' => $password];
+
+        return $rider;
     }
 }

@@ -1,23 +1,15 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 interface Rider {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    commission_percentage: number | null;
-    created_at: string;
+    id: number; name: string; email: string; phone: string;
+    commission_percentage: number | null; is_active: boolean; created_at: string;
 }
-interface Props {
-    riders: Rider[];
-}
+interface Props { riders: Rider[] }
 
 export default function AdminRiders({ riders }: Props) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
-        email: '',
-        phone: '',
-        commission_percentage: '',
+        name: '', email: '', phone: '', commission_percentage: '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -28,62 +20,39 @@ export default function AdminRiders({ riders }: Props) {
     return (
         <>
             <Head title="Riders" />
-            <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+            <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
                 <h1 className="text-xl font-bold text-[#0D2A47]">Riders</h1>
 
-                {/* ── Create form ── */}
                 <form onSubmit={submit} className="bg-white rounded-2xl border border-[#D4E8F5] p-5 space-y-3">
                     <p className="text-[10px] font-bold text-[#8AA8C0] uppercase tracking-widest">Add a rider</p>
                     <div className="grid md:grid-cols-2 gap-3">
                         <div>
-                            <input
-                                value={data.name}
-                                onChange={e => setData('name', e.target.value)}
-                                placeholder="Full name"
-                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2"
-                            />
+                            <input value={data.name} onChange={e => setData('name', e.target.value)}
+                                placeholder="Full name" className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2" />
                             {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
                         </div>
                         <div>
-                            <input
-                                value={data.email}
-                                onChange={e => setData('email', e.target.value)}
-                                placeholder="Email"
-                                type="email"
-                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2"
-                            />
+                            <input value={data.email} onChange={e => setData('email', e.target.value)}
+                                placeholder="Email" type="email" className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2" />
                             {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
                         </div>
                         <div>
-                            <input
-                                value={data.phone}
-                                onChange={e => setData('phone', e.target.value)}
-                                placeholder="2547XXXXXXXX"
-                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2"
-                            />
+                            <input value={data.phone} onChange={e => setData('phone', e.target.value)}
+                                placeholder="2547XXXXXXXX" className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2" />
                             {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
                         </div>
                         <div>
-                            <input
-                                value={data.commission_percentage}
-                                onChange={e => setData('commission_percentage', e.target.value)}
-                                placeholder="Commission % (optional)"
-                                type="number"
-                                step="0.01"
-                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2"
-                            />
+                            <input value={data.commission_percentage} onChange={e => setData('commission_percentage', e.target.value)}
+                                placeholder="Commission % (optional)" type="number" step="0.01"
+                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2" />
                         </div>
                     </div>
-                    <button
-                        type="submit"
-                        disabled={processing}
-                        className="bg-[#1A4A7A] text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
-                    >
+                    <button type="submit" disabled={processing}
+                        className="bg-[#1A4A7A] text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50">
                         Create rider
                     </button>
                 </form>
 
-                {/* ── Rider list ── */}
                 <div className="bg-white rounded-2xl border border-[#D4E8F5] overflow-hidden">
                     <table className="w-full text-sm">
                         <thead className="bg-[#F5F8FC] text-[#8AA8C0] text-xs">
@@ -91,23 +60,15 @@ export default function AdminRiders({ riders }: Props) {
                                 <th className="text-left font-semibold px-4 py-2.5">Name</th>
                                 <th className="text-left font-semibold px-4 py-2.5">Phone</th>
                                 <th className="text-left font-semibold px-4 py-2.5">Commission</th>
-                                <th className="text-left font-semibold px-4 py-2.5">Joined</th>
+                                <th className="text-left font-semibold px-4 py-2.5">Password</th>
+                                <th className="text-left font-semibold px-4 py-2.5">Status</th>
+                                <th className="text-left font-semibold px-4 py-2.5">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {riders.map(r => (
-                                <tr key={r.id} className="border-t border-[#D4E8F5]">
-                                    <td className="px-4 py-2.5">
-                                        <p className="font-medium text-[#0D2A47]">{r.name}</p>
-                                        <p className="text-xs text-[#8AA8C0]">{r.email}</p>
-                                    </td>
-                                    <td className="px-4 py-2.5 text-[#4A6A8A]">{r.phone}</td>
-                                    <td className="px-4 py-2.5 text-[#4A6A8A]">{r.commission_percentage ?? '—'}%</td>
-                                    <td className="px-4 py-2.5 text-[#8AA8C0]">{new Date(r.created_at).toLocaleDateString()}</td>
-                                </tr>
-                            ))}
+                            {riders.map(r => <RiderRow key={r.id} rider={r} />)}
                             {riders.length === 0 && (
-                                <tr><td colSpan={4} className="px-4 py-6 text-center text-[#8AA8C0]">No riders yet.</td></tr>
+                                <tr><td colSpan={6} className="px-4 py-6 text-center text-[#8AA8C0]">No riders yet.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -117,9 +78,85 @@ export default function AdminRiders({ riders }: Props) {
     );
 }
 
-AdminRiders.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: '/dashboard' },
-        { title: 'Riders', href: '/admin/riders' },
-    ],
-};
+function RiderRow({ rider }: { rider: Rider }) {
+    const [commission, setCommission] = useState(rider.commission_percentage ?? '');
+    const [revealed, setRevealed] = useState<string | null>(null);
+    const [revealing, setRevealing] = useState(false);
+    const [busy, setBusy] = useState(false);
+
+    const saveCommission = () => {
+        router.patch(`/admin/riders/${rider.id}`, {
+            phone: rider.phone,
+            commission_percentage: commission === '' ? null : commission,
+        }, { preserveScroll: true });
+    };
+
+    const toggleStatus = () => {
+        setBusy(true);
+        router.post(`/admin/riders/${rider.id}/toggle-status`, {}, {
+            preserveScroll: true,
+            onFinish: () => setBusy(false),
+        });
+    };
+
+    const resetPassword = () => {
+        if (!confirm(`Generate and email a new password to ${rider.name}?`)) return;
+        setBusy(true);
+        router.post(`/admin/riders/${rider.id}/reset-password`, {}, {
+            preserveScroll: true,
+            onFinish: () => { setBusy(false); setRevealed(null); },
+        });
+    };
+
+    const togglePassword = async () => {
+        if (revealed) { setRevealed(null); return; }
+        setRevealing(true);
+        try {
+            const res = await fetch(`/admin/riders/${rider.id}/password`);
+            const json = await res.json();
+            setRevealed(json.password);
+        } finally {
+            setRevealing(false);
+        }
+    };
+
+    return (
+        <tr className="border-t border-[#D4E8F5] align-top">
+            <td className="px-4 py-2.5">
+                <p className="font-medium text-[#0D2A47]">{rider.name}</p>
+                <p className="text-xs text-[#8AA8C0]">{rider.email}</p>
+            </td>
+            <td className="px-4 py-2.5 text-[#4A6A8A]">{rider.phone}</td>
+            <td className="px-4 py-2.5">
+                <input type="number" step="0.01" value={commission}
+                    onChange={e => setCommission(e.target.value)} onBlur={saveCommission}
+                    className="w-16 text-sm rounded-lg border border-[#D4E8F5] px-2 py-1" />%
+            </td>
+            <td className="px-4 py-2.5">
+                <button type="button" onClick={togglePassword} disabled={revealing}
+                    className="text-xs font-mono text-[#1A78C2] hover:underline">
+                    {revealing ? '…' : revealed ? revealed : '••••••••'}
+                </button>
+            </td>
+            <td className="px-4 py-2.5">
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    rider.is_active ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+                }`}>
+                    {rider.is_active ? 'Active' : 'Suspended'}
+                </span>
+            </td>
+            <td className="px-4 py-2.5">
+                <div className="flex gap-2">
+                    <button type="button" onClick={toggleStatus} disabled={busy}
+                        className="text-xs font-semibold text-[#1A4A7A] hover:underline disabled:opacity-50">
+                        {rider.is_active ? 'Suspend' : 'Activate'}
+                    </button>
+                    <button type="button" onClick={resetPassword} disabled={busy}
+                        className="text-xs font-semibold text-[#1A4A7A] hover:underline disabled:opacity-50">
+                        Reset password
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
+}
