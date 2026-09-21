@@ -35,7 +35,7 @@ class DashboardController extends Controller
 
 
         $orders = Order::whereHas('delivery', $scope)
-            ->with(['orderItems', 'charges', 'delivery', 'payment'])
+            ->with(['delivery'])
             ->latest()
             ->paginate(10)
             ->through(fn(Order $order) => [

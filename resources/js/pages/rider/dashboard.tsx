@@ -1,6 +1,8 @@
-import { Head } from '@inertiajs/react';
-import { OrderCard, RIDER_STATUS_ACTIONS } from '@/pages/dashboard';
+import { Head, router } from '@inertiajs/react';
+import { RIDER_STATUS_ACTIONS } from '@/pages/dashboard';
 import { useForm } from '@inertiajs/react';
+import { useState } from 'react';
+
 
 
 interface Earning { id: number; order_id: number; amount: number; percentage: number; created_at: string }
@@ -10,12 +12,84 @@ interface Props {
     recentEarnings: Earning[];
 }
 
+interface DeliveryInfo {
+    address: string;
+    recepient_name: string | null;
+    recepient_phone: string | null;
+    contact_name: string | null;
+    contact_phone: string | null;
+    schedule_label: string;
+    notes: string | null;
+}
+interface Order {
+    id: number;
+    status: string;
+    status_label: string;
+    delivery: DeliveryInfo | null;
+}
+
+
+function RiderOrderCard({ order }: { order: Order }) {
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const actions = RIDER_STATUS_ACTIONS[order.status] ?? [];
+
+    const handleStatusChange = (next: string) => {
+        setActionLoading(next);
+        router.post(`/orders/${order.id}/status`, { status: next }, {
+            preserveScroll: true,
+            onFinish: () => setActionLoading(null),
+        });
+    };
+
+    const recipientName = order.delivery?.recepient_name || order.delivery?.contact_name;
+    const recipientPhone = order.delivery?.recepient_phone || order.delivery?.contact_phone;
+
+    return (
+        <div className="bg-white rounded-2xl border border-[#D4E8F5] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+                <p className="font-semibold text-[#0D2A47]">Order #{order.id}</p>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#F5F8FC] text-[#4A6A8A] border border-[#D4E8F5]">
+                    {order.status_label}
+                </span>
+            </div>
+
+            <div className="bg-[#F5F8FC] rounded-xl p-3 space-y-1.5 text-sm">
+                <p className="text-[#0D2A47] font-medium">{recipientName ?? 'No name provided'}</p>
+                <p className="text-[#4A6A8A]">{recipientPhone ?? 'No phone provided'}</p>
+                <p className="text-[#4A6A8A]">{order.delivery?.address}</p>
+                {order.delivery?.schedule_label && (
+                    <p className="text-[#8AA8C0] text-xs">{order.delivery.schedule_label}</p>
+                )}
+                {order.delivery?.notes && (
+                    <p className="text-[#8AA8C0] text-xs italic">"{order.delivery.notes}"</p>
+                )}
+            </div>
+
+            {actions.length > 0 && (
+                <div className="flex gap-2">
+                    {actions.map(action => (
+                        <button
+                            key={action.next}
+                            type="button"
+                            onClick={() => handleStatusChange(action.next)}
+                            disabled={actionLoading !== null}
+                            className={`flex-1 py-2 rounded-xl text-xs font-semibold disabled:opacity-50 ${action.cls}`}
+                        >
+                            {actionLoading === action.next ? 'Updating…' : action.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function RiderDashboard({ stats, orders, recentEarnings }: Props) {
     return (
         <>
             <Head title="Rider Dashboard" />
             <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <WithdrawForm availableBalance={stats.availableBalance} />
                     <StatBox label="Out for delivery" value={stats.outForDelivery} />
                     <StatBox label="Delivered today" value={stats.deliveredToday} />
@@ -28,8 +102,7 @@ export default function RiderDashboard({ stats, orders, recentEarnings }: Props)
                         <p className="text-sm text-[#8AA8C0]">No orders assigned to you yet.</p>
                     )}
                     {orders.data.map(order => (
-                        <OrderCard key={order.id} order={order} statusActions={RIDER_STATUS_ACTIONS} />
-                    ))}
+                        <RiderOrderCard key={order.id} order={order} />))}
                 </div>
 
                 {recentEarnings.length > 0 && (
