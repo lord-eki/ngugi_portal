@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search, Users } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Menu, Droplet, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -61,6 +61,11 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                       href: '/admin/riders',
                       icon: Users,
                   },
+                  {
+                  title: 'Refillers',
+                  href: '/admin/refillers',
+                  icon: Droplet,
+              },
               ]
             : []),
     ];

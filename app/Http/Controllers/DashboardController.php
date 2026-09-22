@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\Refiller;
 use App\Models\RiderEarning;
 use App\Models\Subscription;
 use App\Models\User;
@@ -36,7 +37,7 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
-        $orders = Order::with(['orderItems', 'charges', 'delivery.rider', 'payment'])
+        $orders = Order::with(['orderItems', 'charges', 'delivery.rider', 'payment', 'refiller'])
             ->latest()
             ->paginate(10)
             ->through(fn(Order $order) => [
@@ -65,6 +66,11 @@ class DashboardController extends Controller
                     'label'  => $c->label,
                     'amount' => (int) $c->amount,
                 ]),
+
+                'refiller' => $order->refiller ? [
+                    'id'   => $order->refiller->id,
+                    'name' => $order->refiller->name,
+                ] : null,
 
                 'delivery' => $order->delivery ? [
                     'location_mode'  => $order->delivery->location_mode,
@@ -108,6 +114,8 @@ class DashboardController extends Controller
             'orders'        => $orders,
             'subscriptions' => $subscriptions,
             'riders'        => User::where('role', 'rider')->where('is_active', true)->get(['id', 'name']),
+            'refillers'     => Refiller::where('is_active', true)->get(['id', 'name']),   
+
 
         ]);
     }

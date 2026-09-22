@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $data = $request->validate(['refiller_id' => ['nullable', 'exists:refillers,id']]);
             return $action->handle($order, $data['refiller_id'] ?? null);
         })->name('orders.assign-refiller');
+        Route::patch('/refillers/{refiller}', [RefillerController::class, 'update'])->name('refillers.update');
 
         Route::post('/orders/{order}/resend-delivery-code', [OrderController::class, 'resendDeliveryCode'])
             ->middleware('role:admin')

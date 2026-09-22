@@ -9,6 +9,9 @@ interface OrderItem {
     amount: number; label: string;
 }
 interface OrderCharge { id: number; label: string; amount: number; }
+
+interface RefillerOption { id: number; name: string }
+
 interface DeliveryInfo {
     location_mode: string; address: string;
     contact_name: string | null; contact_phone: string | null;
@@ -25,6 +28,7 @@ interface Order {
     grand_total: number; can_cancel: boolean; created_at: string;
     items: OrderItem[]; charges: OrderCharge[];
     delivery: DeliveryInfo | null; payment: PaymentInfo | null;
+    refiller?: { id: number; name: string } | null;
 }
 interface Subscription {
     id: number; frequency: string; frequency_label: string;
@@ -44,6 +48,7 @@ interface Props {
     orders: { data: Order[]; last_page: number; current_page: number };
     subscriptions: Subscription[];
     riders?: Rider[];
+    refillers?: RefillerOption[];
 }
 
 // ── Style maps ─────────────────────────────────────────────────────
@@ -140,8 +145,8 @@ function InfoRow({ label, value, mono = false, italic = false }: {
 }
 
 // ── Order card ─────────────────────────────────────────────────────
-export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAssign = false, riders = [] }: {
-    order: Order; statusActions?: typeof ORDER_STATUS_ACTIONS; showAssign?: boolean; riders?: Rider[];
+export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAssign = false, riders = [], refillers = [] }: {
+    order: Order; statusActions?: typeof ORDER_STATUS_ACTIONS; showAssign?: boolean; riders?: Rider[]; refillers?: RefillerOption[];
 }) {
     const [open, setOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -300,6 +305,25 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                                             >
                                                 <option value="">— Unassigned —</option>
                                                 {riders.map(r => (
+                                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {showAssign && (
+                                        <div className="bg-[#F5F8FC] rounded-xl p-3 border border-[#D4E8F5]">
+                                            <p className="text-[10px] text-[#8AA8C0] font-semibold mb-1.5">💧 Refiller</p>
+                                            <select
+                                                defaultValue={order.refiller?.id ?? ''}
+                                                onChange={(e) => {
+                                                    const refillerId = e.target.value ? Number(e.target.value) : null;
+                                                    router.post(`/orders/${order.id}/assign-refiller`, { refiller_id: refillerId });
+                                                }}
+                                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-2 py-1.5 bg-white text-[#0D2A47]"
+                                            >
+                                                <option value="">— Unassigned —</option>
+                                                {refillers.map(r => (
                                                     <option key={r.id} value={r.id}>{r.name}</option>
                                                 ))}
                                             </select>
@@ -642,7 +666,7 @@ function AdminSubActions({ sub, loading, onAction }: {
 }
 
 // ── Main ───────────────────────────────────────────────────────────
-export default function Dashboard({ stats, orders, subscriptions, riders = [] }: Props) {
+export default function Dashboard({ stats, orders, subscriptions, riders = [], refillers = [] }: Props) {
     const [mainTab, setMainTab] = useState<'orders' | 'subscriptions'>('orders');
     const [statusTab, setStatusTab] = useState<'all' | 'active' | 'delivered' | 'pending' | 'cancelled'>('all');
     const [search, setSearch] = useState('');
@@ -787,7 +811,7 @@ export default function Dashboard({ stats, orders, subscriptions, riders = [] }:
 
                         {filtered.length > 0 ? (
                             <div className="space-y-3">
-                                {filtered.map(order => <OrderCard key={order.id} order={order} showAssign riders={riders} />)}                            </div>
+                                {filtered.map(order => <OrderCard key={order.id} order={order} showAssign riders={riders} refillers={refillers} />)}                                   </div>
                         ) : (
                             <div className="text-center py-16 text-[#8AA8C0]">
                                 <svg className="mx-auto mb-3 opacity-30" width="44" height="44" viewBox="0 0 48 48" fill="none">

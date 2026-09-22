@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
@@ -38,6 +39,19 @@ class RefillerController extends Controller
             'type' => 'success',
             'message' => $refiller->is_active ? "{$refiller->name} reactivated." : "{$refiller->name} deactivated.",
         ]);
+        return back();
+    }
+
+    public function update(Refiller $refiller, Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'regex:/^2547\d{8}$/'],
+            'commission_percentage' => ['required', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $refiller->update($validated);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "{$refiller->name}'s details updated."]);
         return back();
     }
 }
