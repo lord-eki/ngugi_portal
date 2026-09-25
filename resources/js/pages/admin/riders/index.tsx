@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 interface Rider {
     id: number; name: string; email: string; phone: string; national_id: string; payout_method: string; transport_type: string;
-    commission_percentage: number | null; is_active: boolean; created_at: string;
+    commission_percentage: number | null; is_active: boolean; created_at: string; email_verified_at: string | null;
 }
 interface Props { riders: Rider[] }
 
@@ -43,7 +43,7 @@ export default function AdminRiders({ riders }: Props) {
                         </div>
                         <div>
                             <input value={data.national_id} onChange={e => setData('national_id', e.target.value)}
-                                placeholder='National ID number' className="w-full text-sm ronded-lg border border-[#D4E8F5] px-3 py-2" />
+                                placeholder='National ID number' className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2" />
                             {errors.national_id && <p className="text-xs text-red-600 mt-1">{errors.national_id}</p>}
                         </div>
                         <div>
@@ -169,6 +169,10 @@ function RiderRow({ rider }: { rider: Rider }) {
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${rider.is_active ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
                     }`}>
                     {rider.is_active ? 'Active' : 'Suspended'}
+                </span>
+                <span className={`ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${rider.email_verified_at ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}>
+                    {rider.email_verified_at ? 'Verified' : 'Unverified'}
                 </span>
             </td>
             <td className="px-4 py-2.5">

@@ -23,7 +23,7 @@ class RiderController extends Controller
         return Inertia::render('admin/riders/index', [
             'riders' => User::where('role', 'rider')
                 ->latest()
-                ->get(['id', 'name', 'email', 'phone', 'commission_percentage',
+                ->get(['id', 'name', 'email', 'phone', 'commission_percentage','email_verified_at',
                  'is_active', 'created_at','national_id','payout_method','transport_type']),
         ]);
     }

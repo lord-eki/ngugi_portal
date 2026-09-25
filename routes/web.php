@@ -8,6 +8,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\Rider\DashboardController as RiderDashboardController;
+use App\Http\Controllers\Rider\RiderEmailVerificationController;
 use App\Http\Controllers\WithdrawalController;
 use App\Models\Order;
 use Illuminate\Http\Request;
@@ -84,5 +85,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/dashboard', [RiderDashboardController::class, 'index'])->name('dashboard');
     });
 });
+
+Route::get('/rider/verify-email/{id}/{hash}', [RiderEmailVerificationController::class,'verify'])->middleware('signed')->name('rider.verify-email');
+Route::post('/rider/resend-verifiation', [RiderEmailVerificationController::class, 'resend'])->middleware(['auth','role:rider'])->name('rider.resend-verification');
 
 require __DIR__ . '/settings.php';

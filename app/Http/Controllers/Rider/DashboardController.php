@@ -82,6 +82,7 @@ class DashboardController extends Controller
                 'stats' => $stats,
                 'orders' => $orders,
                 'recentEarnings' => $recentEarnings,
+                'emailVerified' => (bool) Auth::user()->email_verified_at
             ]
         );
     }

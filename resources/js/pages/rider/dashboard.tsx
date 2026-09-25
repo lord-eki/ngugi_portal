@@ -10,6 +10,7 @@ interface Props {
     stats: { outForDelivery: number; deliveredToday: number; assignedTotal: number; totalEarned: number; availableBalance: number };
     orders: { data: any[] };
     recentEarnings: Earning[];
+    emailVerified: boolean;
 }
 
 interface DeliveryInfo {
@@ -105,10 +106,21 @@ function RiderOrderCard({ order }: { order: Order }) {
     );
 }
 
-export default function RiderDashboard({ stats, orders, recentEarnings }: Props) {
+export default function RiderDashboard({ stats, orders, recentEarnings,emailVerified }: Props) {
     return (
         <>
             <Head title="Rider Dashboard" />
+            {!emailVerified && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mt-2 flex items-center justify-between gap-3">
+                    <div>
+                        <p className="text-sm font-semibold text-amber-800">Verify your email</p>
+                        <p className="text-xs text-amber-700 mt-0.5">You won't be assigned new deliveries until you do - check your inbox.</p>
+                        <button type="button" onClick={() =>router.post('/rider/resend-verification',{},{preserveScroll:true})} className="text-xs font-semibold text-amber-900 underline flex-shrink-0">
+                            Resend Email
+                        </button>
+                    </div>
+                </div>
+            )}
             <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <WithdrawForm availableBalance={stats.availableBalance} />

@@ -2,6 +2,8 @@
 
 namespace App\Actions\Riders;
 
+use App\Http\Controllers\Rider\RiderEmailVerificationController;
+use App\Mail\RiderVerificationMail;
 use App\Mail\RiderWelcomeMail;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
@@ -29,6 +31,7 @@ class CreateRiderAction
 
         $rider->forceFill(['password_encrypted' => Crypt::encryptString($password)])->save();
         Mail::to($rider->email)->queue(new RiderWelcomeMail($rider,$password));
+        Mail::to($rider->email)->queue(new RiderVerificationMail($rider,RiderEmailVerificationController::signedUrl($rider)));
 
 
         return $rider;

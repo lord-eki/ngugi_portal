@@ -11,7 +11,7 @@ class AssignRiderAction
     public function handle(Order $order, ?int $riderId): RedirectResponse
     {
         if ($riderId !== null) {
-            User::where('id', $riderId)->where('role', 'rider')->where('is_active', true)->firstOrFail();
+            User::where('id', $riderId)->where('role', 'rider')->where('is_active', true)->whereNotNull('email_verified_at')->firstOrFail();
         }
 
         $order->delivery()->update([
