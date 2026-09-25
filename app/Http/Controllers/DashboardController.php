@@ -113,7 +113,7 @@ class DashboardController extends Controller
             'stats'         => $stats,
             'orders'        => $orders,
             'subscriptions' => $subscriptions,
-            'riders'        => User::where('role', 'rider')->where('is_active', true)->whereNotNull('email_verified_at')->get(['id', 'name']),
+            'riders'        => User::where('role', 'rider')->where('is_active', true)->where('is_online',true)->whereNotNull('email_verified_at')->get(['id', 'name']),
             'refillers'     => Refiller::where('is_active', true)->get(['id', 'name']),   
 
 

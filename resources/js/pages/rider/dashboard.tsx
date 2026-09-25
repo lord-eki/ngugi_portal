@@ -11,6 +11,7 @@ interface Props {
     orders: { data: any[] };
     recentEarnings: Earning[];
     emailVerified: boolean;
+    isOnline:boolean;
 }
 
 interface DeliveryInfo {
@@ -106,7 +107,7 @@ function RiderOrderCard({ order }: { order: Order }) {
     );
 }
 
-export default function RiderDashboard({ stats, orders, recentEarnings,emailVerified }: Props) {
+export default function RiderDashboard({ stats, orders, recentEarnings, emailVerified,isOnline }: Props) {
     return (
         <>
             <Head title="Rider Dashboard" />
@@ -115,12 +116,31 @@ export default function RiderDashboard({ stats, orders, recentEarnings,emailVeri
                     <div>
                         <p className="text-sm font-semibold text-amber-800">Verify your email</p>
                         <p className="text-xs text-amber-700 mt-0.5">You won't be assigned new deliveries until you do - check your inbox.</p>
-                        <button type="button" onClick={() =>router.post('/rider/resend-verification',{},{preserveScroll:true})} className="text-xs font-semibold text-amber-900 underline flex-shrink-0">
+                        <button type="button" onClick={() => router.post('/rider/resend-verification', {}, { preserveScroll: true })} className="text-xs font-semibold text-amber-900 underline flex-shrink-0">
                             Resend Email
                         </button>
                     </div>
                 </div>
             )}
+            <div className={`rounded-2xl p-4 mt-4 flex items-center justify-between border ${isOnline ? 'bg-green-50 border-green-200' : 'bg-[#F5F8FC] border-[#D4E8F5]'
+                }`}>
+                <div>
+                    <p className={`text-sm font-bold ${isOnline ? 'text-green-800' : 'text-[#4A6A8A]'}`}>
+                        {isOnline ? 'You are online' : 'You are offline'}
+                    </p>
+                    <p className="text-xs text-[#8AA8C0] mt-0.5">
+                        {isOnline ? 'You can receive new deliveries' : "You won't be assigned new deliveries"}
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => router.post('/rider/toggle-availability', {}, { preserveScroll: true })}
+                    className={`px-4 py-2 rounded-xl text-xs font-semibold ${isOnline ? 'bg-white border border-green-300 text-green-800' : 'bg-[#1A4A7A] text-white'
+                        }`}
+                >
+                    {isOnline ? 'Go Offline' : 'Go Online'}
+                </button>
+            </div>
             <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <WithdrawForm availableBalance={stats.availableBalance} />

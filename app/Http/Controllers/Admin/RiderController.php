@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/Admin/RiderController.php
 
 namespace App\Http\Controllers\Admin;
 
@@ -24,7 +23,7 @@ class RiderController extends Controller
             'riders' => User::where('role', 'rider')
                 ->latest()
                 ->get(['id', 'name', 'email', 'phone', 'commission_percentage','email_verified_at',
-                 'is_active', 'created_at','national_id','payout_method','transport_type']),
+                 'is_active', 'created_at','national_id','payout_method','transport_type','is_online']),
         ]);
     }
 
@@ -78,6 +77,9 @@ class RiderController extends Controller
             $rider->update(['is_active' => $activating]);
 
             if (! $activating) {
+
+                $rider->update(['is_online' => false]);
+
                 Delivery::where('rider_id', $rider->id)
                     ->whereHas('order', fn($q) => $q->whereNotIn('status', ['delivered', 'cancelled']))
                     ->update(['rider_id' => null, 'assigned_at' => null]);

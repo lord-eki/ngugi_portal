@@ -82,7 +82,8 @@ class DashboardController extends Controller
                 'stats' => $stats,
                 'orders' => $orders,
                 'recentEarnings' => $recentEarnings,
-                'emailVerified' => (bool) Auth::user()->email_verified_at
+                'emailVerified' => (bool) Auth::user()->email_verified_at,
+                'isOnline' => (bool) Auth::user()->is_online,
             ]
         );
     }

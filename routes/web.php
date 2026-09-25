@@ -9,6 +9,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\MpesaController;
 use App\Http\Controllers\Rider\DashboardController as RiderDashboardController;
 use App\Http\Controllers\Rider\RiderEmailVerificationController;
+use App\Http\Controllers\RiderAvailabilityController;
 use App\Http\Controllers\WithdrawalController;
 use App\Models\Order;
 use Illuminate\Http\Request;
@@ -43,6 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware('role:rider')->group(function () {
         Route::post('/rider/withdrawals', [WithdrawalController::class, 'store'])->name('rider.withdrawals.store');
+        Route::post('/rider/toggle-availability', [RiderAvailabilityController::class, 'toggle'])->name('rider.toggle-availability');
     });
 
     Route::post('/orders/{order}/verify-payment', [OrderController::class, 'verifyPayment'])
@@ -72,8 +74,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $data = $request->validate(['refiller_id' => ['nullable', 'exists:refillers,id']]);
             return $action->handle($order, $data['refiller_id'] ?? null);
         })->name('orders.assign-refiller');
-            Route::post('/orders/{order}/assign-rider', [OrderController::class, 'assignRider'])
-        ->name('orders.assign-rider');
+        Route::post('/orders/{order}/assign-rider', [OrderController::class, 'assignRider'])
+            ->name('orders.assign-rider');
         Route::patch('/refillers/{refiller}', [RefillerController::class, 'update'])->name('refillers.update');
 
         Route::post('/orders/{order}/resend-delivery-code', [OrderController::class, 'resendDeliveryCode'])
@@ -86,7 +88,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-Route::get('/rider/verify-email/{id}/{hash}', [RiderEmailVerificationController::class,'verify'])->middleware('signed')->name('rider.verify-email');
-Route::post('/rider/resend-verifiation', [RiderEmailVerificationController::class, 'resend'])->middleware(['auth','role:rider'])->name('rider.resend-verification');
+Route::get('/rider/verify-email/{id}/{hash}', [RiderEmailVerificationController::class, 'verify'])->middleware('signed')->name('rider.verify-email');
+Route::post('/rider/resend-verification', [RiderEmailVerificationController::class, 'resend'])->middleware(['auth', 'role:rider'])->name('rider.resend-verification');
+
 
 require __DIR__ . '/settings.php';

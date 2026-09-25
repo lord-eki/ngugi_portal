@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 interface Rider {
     id: number; name: string; email: string; phone: string; national_id: string; payout_method: string; transport_type: string;
-    commission_percentage: number | null; is_active: boolean; created_at: string; email_verified_at: string | null;
+    commission_percentage: number | null; is_active: boolean; created_at: string; email_verified_at: string | null; is_online:boolean;
 }
 interface Props { riders: Rider[] }
 
@@ -147,7 +147,11 @@ function RiderRow({ rider }: { rider: Rider }) {
     return (
         <tr className="border-t border-[#D4E8F5] align-top">
             <td className="px-4 py-2.5">
-                <p className="font-medium text-[#0D2A47]">{rider.name}</p>
+                <p className="font-medium text-[#0D2A47] flex items-center gap-1.5">
+                    <span className={`w-2.5 h-2.5 rounded-full ${rider.is_online ? 'bg-green-500' : 'bg-gray-300'}`} /> 
+                    {rider.name} 
+                    <span className={`rounded-full p-1 text-xs ${rider.is_online ? 'bg-green-500' : 'bg-gray-300'}`}>{rider.is_online ? 'online' : 'offline'}</span> 
+                </p>
                 <p className="text-xs text-[#8AA8C0]">{rider.email}</p>
             </td>
             <td className="px-4 py-2.5 text-[#4A6A8A]">{rider.phone}</td>
