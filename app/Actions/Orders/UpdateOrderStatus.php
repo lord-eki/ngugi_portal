@@ -28,11 +28,10 @@ class UpdateOrderStatus
             'status' => ['required', 'in:confirmed,out_for_delivery,delivered,cancelled'],
         ]);
 
+        $order->loadMissing('delivery');
 
         if ($user->isRider()) {
             abort_if(! $user->is_active, 403, 'Your account has been suspended.');
-
-            $order->loadMissing('delivery');
             abort_if($order->delivery?->rider_id !== $user->id, 403, 'This order is not assigned to you.');
 
             $allowed = self::RIDER_TRANSITIONS[$order->status] ?? [];
@@ -48,18 +47,11 @@ class UpdateOrderStatus
                 );
 
                 $order->delivery->update(['delivery_code_verified_at' => now()]);
-
-                if ($data['status'] === 'delivered') {
-                    app(RecordRiderEarningAction::class)->handle($order);
-                    app(PayRefillerForOrderAction::class)
-                        ->handle($order, app(InitiateB2CTransferAction::class));
-                }
             }
         } else {
             abort_unless($user->isAdmin(), 403);
 
             if ($data['status'] === 'out_for_delivery') {
-                $order->loadMissing('delivery');
                 abort_if(
                     ! $order->delivery?->rider_id,
                     422,
@@ -68,6 +60,7 @@ class UpdateOrderStatus
             }
         }
 
+        
         $order->update(['status' => $data['status']]);
 
         if ($data['status'] === 'out_for_delivery' && ! $order->delivery?->delivery_code) {
@@ -83,6 +76,12 @@ class UpdateOrderStatus
             }
         }
 
-        return back()->with('success', 'Order status updated.');
+        if ($data['status'] === 'delivered') {
+            app(RecordRiderEarningAction::class)->handle($order);
+            app(PayRefillerForOrderAction::class)
+                ->handle($order, app(InitiateB2CTransferAction::class));
+        }
+
+        return back();
     }
 }

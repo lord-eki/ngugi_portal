@@ -23,7 +23,8 @@ class RiderController extends Controller
         return Inertia::render('admin/riders/index', [
             'riders' => User::where('role', 'rider')
                 ->latest()
-                ->get(['id', 'name', 'email', 'phone', 'commission_percentage', 'is_active', 'created_at']),
+                ->get(['id', 'name', 'email', 'phone', 'commission_percentage',
+                 'is_active', 'created_at','national_id','payout_method','transport_type']),
         ]);
     }
 
@@ -34,6 +35,9 @@ class RiderController extends Controller
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['required', 'regex:/^2547\d{8}$/'],
             'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'national_id' => ['required','string','max:20'],
+            'payout_method' => ['required','in:mpesa,airtel,bank'],
+            'transport_type' => ['required','in:walking,bicycle,bike']
         ]);
 
         $rider = $action->handle($validated);
@@ -53,6 +57,8 @@ class RiderController extends Controller
         $validated = $request->validate([
             'phone' => ['required', 'regex:/^2547\d{8}$/'],
             'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'payout_method' => ['required','in:mpesa,airtel,bank'],
+            'transport_type' => ['required','in:walking,bicycle,bike']
         ]);
 
         $rider->update($validated);

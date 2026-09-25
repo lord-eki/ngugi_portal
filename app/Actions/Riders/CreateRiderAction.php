@@ -2,6 +2,7 @@
 
 namespace App\Actions\Riders;
 
+use App\Mail\RiderWelcomeMail;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
@@ -10,7 +11,7 @@ use Illuminate\Support\Str;
 
 class CreateRiderAction
 {
-    public function handle(array $data): array
+    public function handle(array $data)
     {
         $password = Str::password(12);
 
@@ -19,6 +20,9 @@ class CreateRiderAction
             'email' => $data['email'],
             'phone' => $data['phone'],
             'commission_percentage' => $data['commission_percentage'] ?? null,
+            'transport_type' => $data['transport_type'],
+            'payout_method' => $data['payout_method'] ?? 'mpesa',
+            'national_id' =>  $data['national_id'],
             'password' => $password,
             'role'  => 'rider',
         ]);

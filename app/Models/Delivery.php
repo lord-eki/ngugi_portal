@@ -11,6 +11,8 @@ class Delivery extends Model
         'order_id',
         'location_mode',
         'manual_address',
+        'delivery_code',
+        'delivery_code_verified_at',
         'pin_address',
         'recepient_name',
         'recepient_phone',

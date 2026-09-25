@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import axios from 'axios';
 import type { OrderData, DeliveryData, PaymentData } from './Wizard';
 
@@ -27,6 +27,9 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
 
+
+    const submittingRef = useRef(false);
+
     const total = orderData.grandTotal;
 
     const buildPayload = (paymentData: PaymentData) => ({
@@ -45,8 +48,12 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
             pinLocation: deliveryData.pinLocation,
             pinAddress: deliveryData.pinAddress,
             manualAddress: deliveryData.manualAddress,
+            contactName: deliveryData.contactName,
+            contactPhone: deliveryData.contactPhone,
+            contactEmail: deliveryData.contactEmail,
             recipientName: deliveryData.recipientName,
             recipientPhone: deliveryData.recipientPhone,
+            recipientEmail: deliveryData.recipientEmail,
             scheduleType: deliveryData.scheduleType,
             scheduledTime: deliveryData.scheduledTime,
             notes: deliveryData.notes,
@@ -55,11 +62,12 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
         payment: paymentData,
     });
 
-    // ── M-Pesa flow (STK push) — used for both 'mpesa-stk' and 'mpesa-till'.
-    // The backend is the only source of truth for payment success: it comes
-    // from the STK callback, never from anything the customer types in here.
+ 
     const handleStkPush = async () => {
+        if (submittingRef.current) return;
         if (!phone || phone.length < 9) { setError('Enter a valid phone number'); return; }
+
+        submittingRef.current = true;
         setError('');
         setSubmitting(true);
         setStkStatus('waiting');
@@ -91,6 +99,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                     if (status === 'paid') {
                         setStkStatus('success');
                         setSubmitting(false);
+                        submittingRef.current = false;
 
                         setTimeout(() => {
                             onNext(paymentData);
@@ -102,6 +111,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                     if (status === 'failed') {
                         setStkStatus('failed');
                         setSubmitting(false);
+                        submittingRef.current = false;
                         setError(statusResponse.data.message || 'Mpesa payment failed. Please try again');
 
                         return;
@@ -113,6 +123,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
                     console.error('Payment status check failed:', error);
                     setStkStatus('failed');
                     setSubmitting(false);
+                    submittingRef.current = false;
                     setError('Unable to check payment status. Please try again');
                 }
             };
@@ -122,13 +133,17 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
         } catch (e: any) {
             setStkStatus('failed');
             setSubmitting(false);
+            submittingRef.current = false;
             setError(e?.response?.data?.message || e?.message || 'Unable to initiate Mpesa payment.');
         }
     };
 
     // ── Card payment flow
     const handleCardSubmit = async () => {
+        if (submittingRef.current) return;
         if (!cardNumber || !cardExpiry || !cardCvv) { setError('Fill in all card details'); return; }
+
+        submittingRef.current = true;
         setError('');
         setSubmitting(true);
 
@@ -140,6 +155,7 @@ export default function StepPayment({ orderData, deliveryData, onNext, onBack }:
             setError(e?.response?.data?.message || 'Card payment failed. Please try again.');
         } finally {
             setSubmitting(false);
+            submittingRef.current = false;
         }
     };
 

@@ -38,9 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/orders/{order}/status', [OrderController::class, 'updateOrderStatus'])
         ->name('orders.status');
 
-    Route::post('/orders/{order}/assign-rider', [OrderController::class, 'assignRider'])
-        ->middleware('role:admin')
-        ->name('orders.assign-rider');
+
 
     Route::middleware('role:rider')->group(function () {
         Route::post('/rider/withdrawals', [WithdrawalController::class, 'store'])->name('rider.withdrawals.store');
@@ -73,6 +71,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $data = $request->validate(['refiller_id' => ['nullable', 'exists:refillers,id']]);
             return $action->handle($order, $data['refiller_id'] ?? null);
         })->name('orders.assign-refiller');
+            Route::post('/orders/{order}/assign-rider', [OrderController::class, 'assignRider'])
+        ->name('orders.assign-rider');
         Route::patch('/refillers/{refiller}', [RefillerController::class, 'update'])->name('refillers.update');
 
         Route::post('/orders/{order}/resend-delivery-code', [OrderController::class, 'resendDeliveryCode'])

@@ -2,14 +2,14 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface Rider {
-    id: number; name: string; email: string; phone: string;
+    id: number; name: string; email: string; phone: string; national_id: string; payout_method: string; transport_type: string;
     commission_percentage: number | null; is_active: boolean; created_at: string;
 }
 interface Props { riders: Rider[] }
 
 export default function AdminRiders({ riders }: Props) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        name: '', email: '', phone: '', commission_percentage: '',
+        name: '', email: '', phone: '', commission_percentage: '', national_id: '', payout_method: 'mpesa', transport_type: 'bike',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -42,6 +42,27 @@ export default function AdminRiders({ riders }: Props) {
                             {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone}</p>}
                         </div>
                         <div>
+                            <input value={data.national_id} onChange={e => setData('national_id', e.target.value)}
+                                placeholder='National ID number' className="w-full text-sm ronded-lg border border-[#D4E8F5] px-3 py-2" />
+                            {errors.national_id && <p className="text-xs text-red-600 mt-1">{errors.national_id}</p>}
+                        </div>
+                        <div>
+                            <select value={data.transport_type} onChange={e => setData('transport_type', e.target.value)}
+                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2 bg-white">
+                                <option value="bike">Motorbike</option>
+                                <option value="bicycle">Bicycle</option>
+                                <option value="walking">Walking</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select value={data.payout_method} onChange={e => setData('payout_method', e.target.value)}
+                                className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2 bg-white">
+                                <option value="mpesa">M-Pesa</option>
+                                <option value="airtel" disabled> Airtel Money (coming soon)</option>
+                                <option value="bank" disabled>Bank (coming soon)</option>
+                            </select>
+                        </div>
+                        <div>
                             <input value={data.commission_percentage} onChange={e => setData('commission_percentage', e.target.value)}
                                 placeholder="Commission % (optional)" type="number" step="0.01"
                                 className="w-full text-sm rounded-lg border border-[#D4E8F5] px-3 py-2" />
@@ -59,6 +80,9 @@ export default function AdminRiders({ riders }: Props) {
                             <tr>
                                 <th className="text-left font-semibold px-4 py-2.5">Name</th>
                                 <th className="text-left font-semibold px-4 py-2.5">Phone</th>
+                                <th className="text-left font-semibold px-4 py-2.5">Transport</th>
+                                <th className="text-left font-semibold px-4 py-2.5">Payout Method</th>
+                                <th className="text-left font-semibold px-4 py-2.5">Natinal ID Number</th>
                                 <th className="text-left font-semibold px-4 py-2.5">Commission</th>
                                 <th className="text-left font-semibold px-4 py-2.5">Password</th>
                                 <th className="text-left font-semibold px-4 py-2.5">Status</th>
@@ -127,6 +151,9 @@ function RiderRow({ rider }: { rider: Rider }) {
                 <p className="text-xs text-[#8AA8C0]">{rider.email}</p>
             </td>
             <td className="px-4 py-2.5 text-[#4A6A8A]">{rider.phone}</td>
+            <td className="px-4 py-2.5 text-[#4A6A8A] capitalize">{rider.transport_type}</td>
+            <td className="px-4 py-2.5 text-[#4A6A8A] capitalize">{rider.payout_method}</td>
+            <td className="px-4 py-2.5 text-[#4A6A8A]">{rider.national_id}</td>
             <td className="px-4 py-2.5">
                 <input type="number" step="0.01" value={commission}
                     onChange={e => setCommission(e.target.value)} onBlur={saveCommission}
@@ -139,9 +166,8 @@ function RiderRow({ rider }: { rider: Rider }) {
                 </button>
             </td>
             <td className="px-4 py-2.5">
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                    rider.is_active ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
-                }`}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${rider.is_active ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+                    }`}>
                     {rider.is_active ? 'Active' : 'Suspended'}
                 </span>
             </td>

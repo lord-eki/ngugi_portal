@@ -299,7 +299,7 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                                                 defaultValue={order.delivery.rider?.id ?? ''}
                                                 onChange={(e) => {
                                                     const riderId = e.target.value ? Number(e.target.value) : null;
-                                                    router.post(`/orders/${order.id}/assign-rider`, { rider_id: riderId });
+                                                     router.post(`/admin/orders/${order.id}/assign-rider`, { rider_id: riderId });
                                                 }}
                                                 className="w-full text-sm rounded-lg border border-[#D4E8F5] px-2 py-1.5 bg-white text-[#0D2A47]"
                                             >
@@ -318,7 +318,7 @@ export function OrderCard({ order, statusActions = ORDER_STATUS_ACTIONS, showAss
                                                 defaultValue={order.refiller?.id ?? ''}
                                                 onChange={(e) => {
                                                     const refillerId = e.target.value ? Number(e.target.value) : null;
-                                                    router.post(`/orders/${order.id}/assign-refiller`, { refiller_id: refillerId });
+                                                   router.post(`/admin/orders/${order.id}/assign-refiller`, { refiller_id: refillerId });
                                                 }}
                                                 className="w-full text-sm rounded-lg border border-[#D4E8F5] px-2 py-1.5 bg-white text-[#0D2A47]"
                                             >
