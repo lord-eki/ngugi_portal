@@ -3,6 +3,7 @@
 namespace App\Actions\Orders;
 
 use App\Models\Order;
+use App\Support\AuditLogger;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -29,6 +30,9 @@ class VerifyPaymentAction
         );
 
         $payment->update(['status' => 'verified']);
+
+        AuditLogger::log('payment.manually_verified', $order, ['payment_id' => $payment->id]);
+
 
         if ($order->status === 'pending') {
             $order->update(['status' => 'confirmed']);

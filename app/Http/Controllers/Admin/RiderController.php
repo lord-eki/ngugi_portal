@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use App\Models\Delivery;
+use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -22,8 +23,20 @@ class RiderController extends Controller
         return Inertia::render('admin/riders/index', [
             'riders' => User::where('role', 'rider')
                 ->latest()
-                ->get(['id', 'name', 'email', 'phone', 'commission_percentage','email_verified_at',
-                 'is_active', 'created_at','national_id','payout_method','transport_type','is_online']),
+                ->get([
+                    'id',
+                    'name',
+                    'email',
+                    'phone',
+                    'commission_percentage',
+                    'email_verified_at',
+                    'is_active',
+                    'created_at',
+                    'national_id',
+                    'payout_method',
+                    'transport_type',
+                    'is_online'
+                ]),
         ]);
     }
 
@@ -34,12 +47,15 @@ class RiderController extends Controller
             'email' => ['required', 'email', 'unique:users,email'],
             'phone' => ['required', 'regex:/^2547\d{8}$/'],
             'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'national_id' => ['required','string','max:20'],
-            'payout_method' => ['required','in:mpesa,airtel,bank'],
-            'transport_type' => ['required','in:walking,bicycle,bike']
+            'national_id' => ['required', 'string', 'max:20'],
+            'payout_method' => ['required', 'in:mpesa,airtel,bank'],
+            'transport_type' => ['required', 'in:walking,bicycle,bike']
         ]);
 
         $rider = $action->handle($validated);
+
+        AuditLogger::log('rider.created', $rider, ['email' => $rider->email]);
+
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -56,11 +72,13 @@ class RiderController extends Controller
         $validated = $request->validate([
             'phone' => ['required', 'regex:/^2547\d{8}$/'],
             'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'payout_method' => ['required','in:mpesa,airtel,bank'],
-            'transport_type' => ['required','in:walking,bicycle,bike']
+            'payout_method' => ['required', 'in:mpesa,airtel,bank'],
+            'transport_type' => ['required', 'in:walking,bicycle,bike']
         ]);
 
         $rider->update($validated);
+
+        AuditLogger::log('rider.updated', $rider, $validated);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "{$rider->name}'s details updated."]);
 
@@ -86,6 +104,9 @@ class RiderController extends Controller
             }
         });
 
+        AuditLogger::log($activating ? 'rider.activated' : 'rider.suspended', $rider);
+
+
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => $activating
@@ -101,6 +122,9 @@ class RiderController extends Controller
         abort_unless($rider->isRider(), 404);
 
         $action->handle($rider);
+
+        AuditLogger::log('rider.password_reset', $rider);
+
 
         Inertia::flash('toast', [
             'type' => 'success',

@@ -5,6 +5,7 @@ namespace App\Actions\Riders;
 use App\Models\RiderEarning;
 use App\Models\User;
 use App\Models\Withdrawal;
+use App\Support\AuditLogger;
 use Iankumu\Mpesa\Facades\Mpesa;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -31,6 +32,9 @@ class RequestWithdrawalAction
                 'phone'    => $rider->phone,
                 'status'   => 'processing',
             ]);
+
+            AuditLogger::log('withdrawal.requested', $withdrawal, ['amount' => $amount]);
+
 
             // Reserve earnings covering the amount, FIFO
             $remaining = $amount;

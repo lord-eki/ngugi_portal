@@ -7,6 +7,7 @@ use App\Actions\Refillers\PayRefillerForOrderAction;
 use App\Actions\Riders\RecordRiderEarningAction;
 use App\Mail\DeliveryCodeMail;
 use App\Models\Order;
+use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -60,8 +61,11 @@ class UpdateOrderStatus
             }
         }
 
-        
+
         $order->update(['status' => $data['status']]);
+
+        AuditLogger::log('order.status_changed', $order, ['from' => $order->getOriginal('status'), 'to' => $data['status']]);
+
 
         if ($data['status'] === 'out_for_delivery' && ! $order->delivery?->delivery_code) {
             $code = (string) random_int(1000, 9999);

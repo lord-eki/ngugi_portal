@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Actions\Orders;
 
 use App\Models\Order;
 use App\Models\Refiller;
+use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 
 class AssignRefillerAction
@@ -14,6 +16,9 @@ class AssignRefillerAction
         }
 
         $order->update(['refiller_id' => $refillerId]);
+
+        AuditLogger::log($refillerId ? 'order.refiller_assigned' : 'order.refiller_unassigned', $order, ['refiller_id' => $refillerId]);
+
 
         return back();
     }

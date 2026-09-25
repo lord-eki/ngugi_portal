@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Refiller;
+use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -26,7 +27,9 @@ class RefillerController extends Controller
             'commission_percentage' => ['required', 'numeric', 'min:0', 'max:100'],
         ]);
 
-        Refiller::create($validated + ['is_active' => true]);
+        $refiller = Refiller::create($validated + ['is_active' => true]);
+
+        AuditLogger::log('refiller.created', $refiller, $validated);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Refiller added.']);
         return back();
@@ -39,6 +42,9 @@ class RefillerController extends Controller
             'type' => 'success',
             'message' => $refiller->is_active ? "{$refiller->name} reactivated." : "{$refiller->name} deactivated.",
         ]);
+
+        AuditLogger::log($refiller->is_active ? 'refiller.activated' : 'refiller.deactivated', $refiller);
+
         return back();
     }
 
@@ -50,6 +56,9 @@ class RefillerController extends Controller
         ]);
 
         $refiller->update($validated);
+
+        AuditLogger::log('refiller.updated', $refiller, $validated);
+
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "{$refiller->name}'s details updated."]);
         return back();

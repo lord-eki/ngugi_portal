@@ -4,6 +4,7 @@ namespace App\Actions\Orders;
 
 use App\Models\Order;
 use App\Models\User;
+use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 
 class AssignRiderAction
@@ -18,6 +19,9 @@ class AssignRiderAction
             'rider_id'    => $riderId,
             'assigned_at' => $riderId ? now() : null,
         ]);
+
+        AuditLogger::log($riderId ? 'order.rider_assigned' : 'order.rider_unassigned', $order, ['rider_id' => $riderId]);
+
 
         return back()->with('success', $riderId ? 'Order assigned to rider.' : 'Rider unassigned.');
     }

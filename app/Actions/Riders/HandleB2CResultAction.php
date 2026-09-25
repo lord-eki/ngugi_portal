@@ -5,6 +5,7 @@ namespace App\Actions\Riders;
 use App\Models\RefillerPayout;
 use App\Models\RiderEarning;
 use App\Models\Withdrawal;
+use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +44,10 @@ class HandleB2CResultAction
         if ((int) $resultCode !== 0) {
             $withdrawal->update(['status' => 'failed', 'result_description' => $result['ResultDesc'] ?? null]);
             RiderEarning::where('withdrawal_id', $withdrawal->id)->update(['status' => 'available', 'withdrawal_id' => null]);
+
+            AuditLogger::log('withdrawal.failed', $withdrawal, ['reason' => $result['ResultDesc'] ?? null]);
+
+
             return;
         }
 
@@ -52,6 +57,9 @@ class HandleB2CResultAction
             'mpesa_receipt' => $params->get('TransactionReceipt'),
             'result_description' => $result['ResultDesc'] ?? null,
         ]);
+
+        AuditLogger::log('withdrawal.completed', $withdrawal, ['receipt' => $params->get('TransactionReceipt')]);
+
         RiderEarning::where('withdrawal_id', $withdrawal->id)->update(['status' => 'withdrawn']);
     }
 
@@ -61,6 +69,8 @@ class HandleB2CResultAction
 
         if ((int) $resultCode !== 0) {
             $payout->update(['status' => 'failed', 'result_description' => $result['ResultDesc'] ?? null]);
+            AuditLogger::log('withdrawal.failed', $payout, ['reason' => $result['ResultDesc'] ?? null]);
+
             return;
         }
 
@@ -70,6 +80,8 @@ class HandleB2CResultAction
             'mpesa_receipt' => $params->get('TransactionReceipt'),
             'result_description' => $result['ResultDesc'] ?? null,
         ]);
+
+        AuditLogger::log('withdrawal.completed', $payout, ['receipt' => $params->get('TransactionReceipt')]);
     }
 
     public function handleTimeout(Request $request): void

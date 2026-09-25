@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -12,7 +13,7 @@ class RiderAvailabilityController extends Controller
     public function toggle(): RedirectResponse
     {
         $rider = Auth::user();
-        abort_unless($rider->isRider(),403);
+        abort_unless($rider->isRider(), 403);
 
         $goingOnline = ! $rider->is_online;
 
@@ -21,7 +22,9 @@ class RiderAvailabilityController extends Controller
             'last_online_at' => $goingOnline ? now() : $rider->last_online_at,
         ]);
 
-        Inertia::flash('toast',[
+        AuditLogger::log($goingOnline ? 'rider.went_online' : 'rider.went_offline', $rider);
+
+        Inertia::flash('toast', [
             'type' => 'success',
             'message' => $goingOnline ? "You're online -  you can now receive deliveries." : "You're offline."
         ]);
