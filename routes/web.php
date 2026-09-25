@@ -37,13 +37,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::post('/orders/{order}/status', [OrderController::class, 'updateOrderStatus'])
+    Route::post('/orders/{order}/status', [OrderController::class, 'updateOrderStatus'])->middleware('throttle:order-status')
         ->name('orders.status');
 
 
 
     Route::middleware('role:rider')->group(function () {
-        Route::post('/rider/withdrawals', [WithdrawalController::class, 'store'])->name('rider.withdrawals.store');
+        Route::post('/rider/withdrawals', [WithdrawalController::class, 'store'])->middleware('throttle:withdrawals')->name('rider.withdrawals.store');
         Route::post('/rider/toggle-availability', [RiderAvailabilityController::class, 'toggle'])->name('rider.toggle-availability');
     });
 
@@ -89,7 +89,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::get('/rider/verify-email/{id}/{hash}', [RiderEmailVerificationController::class, 'verify'])->middleware('signed')->name('rider.verify-email');
-Route::post('/rider/resend-verification', [RiderEmailVerificationController::class, 'resend'])->middleware(['auth', 'role:rider'])->name('rider.resend-verification');
+Route::post('/rider/resend-verification', [RiderEmailVerificationController::class, 'resend'])->middleware(['auth', 'role:rider','throttle:resend'])->name('rider.resend-verification');
 
 
 require __DIR__ . '/settings.php';
