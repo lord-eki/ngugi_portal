@@ -1,46 +1,46 @@
-import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Droplet, Users } from 'lucide-react';
-import AppLogo from '@/components/app-logo';
-import AppLogoIcon from '@/components/app-logo-icon';
-import { Breadcrumbs } from '@/components/breadcrumbs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import { Link, usePage } from "@inertiajs/react";
+import { LayoutGrid, Menu, Droplet, Users } from "lucide-react";
+import AppLogo from "@/components/app-logo";
+import AppLogoIcon from "@/components/app-logo-icon";
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
     NavigationMenu,
     NavigationMenuItem,
     NavigationMenuList,
     navigationMenuTriggerStyle,
-} from '@/components/ui/navigation-menu';
+} from "@/components/ui/navigation-menu";
 import {
     Sheet,
     SheetContent,
     SheetHeader,
     SheetTitle,
     SheetTrigger,
-} from '@/components/ui/sheet';
+} from "@/components/ui/sheet";
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { UserMenuContent } from '@/components/user-menu-content';
-import { useCurrentUrl } from '@/hooks/use-current-url';
-import { useInitials } from '@/hooks/use-initials';
-import { cn, toUrl } from '@/lib/utils';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem, NavItem } from '@/types';
+} from "@/components/ui/tooltip";
+import { UserMenuContent } from "@/components/user-menu-content";
+import { useCurrentUrl } from "@/hooks/use-current-url";
+import { useInitials } from "@/hooks/use-initials";
+import { cn, toUrl } from "@/lib/utils";
+import { dashboard } from "@/routes";
+import type { BreadcrumbItem, NavItem } from "@/types";
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
 };
 
 const activeItemStyles =
-    'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
+    "text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100";
 
 export function AppHeader({ breadcrumbs = [] }: Props) {
     const page = usePage();
@@ -50,29 +50,27 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
     const mainNavItems: NavItem[] = [
         {
-            title: 'Dashboard',
+            title: "Dashboard",
             href: dashboard(),
             icon: LayoutGrid,
         },
-        ...(auth.user?.role === 'admin'
+        ...(auth.user?.role === "admin"
             ? [
                   {
-                      title: 'Riders',
-                      href: '/admin/riders',
+                      title: "Riders",
+                      href: "/admin/riders",
                       icon: Users,
                   },
                   {
-                  title: 'Refillers',
-                  href: '/admin/refillers',
-                  icon: Droplet,
-              },
+                      title: "Refillers",
+                      href: "/admin/refillers",
+                      icon: Droplet,
+                  },
               ]
             : []),
     ];
 
-    const rightNavItems: NavItem[] = [
-      
-    ];
+    const rightNavItems: NavItem[] = [];
 
     return (
         <>
@@ -164,7 +162,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     item.href,
                                                     activeItemStyles,
                                                 ),
-                                                'h-9 cursor-pointer px-3',
+                                                "h-9 cursor-pointer px-3",
                                             )}
                                         >
                                             {item.icon && (
@@ -187,8 +185,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 variant="ghost"
                                 size="icon"
                                 className="group h-9 w-9 cursor-pointer"
-                            >
-                            </Button>
+                            ></Button>
                             <div className="ml-1 hidden gap-1 lg:flex">
                                 {rightNavItems.map((item) => (
                                     <Tooltip key={item.title}>
@@ -226,7 +223,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             alt={auth.user?.name}
                                         />
                                         <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
-                                            {getInitials(auth.user?.name ?? '')}
+                                            {getInitials(auth.user?.name ?? "")}
                                         </AvatarFallback>
                                     </Avatar>
                                 </Button>

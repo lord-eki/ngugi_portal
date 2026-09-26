@@ -1,9 +1,9 @@
-import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, LayoutGrid, Users } from 'lucide-react';
-import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
-import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
+import { Link, usePage } from "@inertiajs/react";
+import { BookOpen, LayoutGrid, Users } from "lucide-react";
+import AppLogo from "@/components/app-logo";
+import { NavFooter } from "@/components/nav-footer";
+import { NavMain } from "@/components/nav-main";
+import { NavUser } from "@/components/nav-user";
 import {
     Sidebar,
     SidebarContent,
@@ -12,24 +12,25 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+} from "@/components/ui/sidebar";
+import { dashboard } from "@/routes";
+import type { NavItem } from "@/types";
 
 export function AppSidebar() {
-    const { auth } = usePage<{ auth: { user: { role: string } | null } }>().props;
+    const { auth } = usePage<{ auth: { user: { role: string } | null } }>()
+        .props;
 
     const mainNavItems: NavItem[] = [
         {
-            title: 'Dashboard',
+            title: "Dashboard",
             href: dashboard(),
             icon: LayoutGrid,
         },
-        ...(auth.user?.role === 'admin'
+        ...(auth.user?.role === "admin"
             ? [
                   {
-                      title: 'Riders',
-                      href: '/admin/riders',
+                      title: "Riders",
+                      href: "/admin/riders",
                       icon: Users,
                   },
               ]
@@ -38,8 +39,8 @@ export function AppSidebar() {
 
     const footerNavItems: NavItem[] = [
         {
-            title: 'Terms of Service',
-            href: '',
+            title: "Terms of Service",
+            href: "",
             icon: BookOpen,
         },
     ];

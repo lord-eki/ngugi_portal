@@ -1,13 +1,13 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithoutRef } from "react";
 import {
     SidebarGroup,
     SidebarGroupContent,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from '@/components/ui/sidebar';
-import { toUrl } from '@/lib/utils';
-import type { NavItem } from '@/types';
+} from "@/components/ui/sidebar";
+import { toUrl } from "@/lib/utils";
+import type { NavItem } from "@/types";
 
 export function NavFooter({
     items,
@@ -19,7 +19,7 @@ export function NavFooter({
     return (
         <SidebarGroup
             {...props}
-            className={`group-data-[collapsible=icon]:p-0 ${className || ''}`}
+            className={`group-data-[collapsible=icon]:p-0 ${className || ""}`}
         >
             <SidebarGroupContent>
                 <SidebarMenu>

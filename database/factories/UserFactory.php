@@ -29,32 +29,48 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
+            'role' => 'customer',
+            'is_active' => true
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+
+    public function admin(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+        return $this->state(fn() => ['role' => 'admin']);
+    }
+
+    public function rider(): static
+    {
+        return $this->state(fn() => [
+            'role' => 'rider',
+            'phone' => '2547' . fake()->numerify('########'),
+            'national_id' => fake()->numerify('########'),
+            'payout_method' => 'mpesa',
+            'transport_type' => 'bike',
+            'commission_percentage' => 10
         ]);
     }
 
-    /**
-     * Indicate that the model has two-factor authentication configured.
-     */
-    public function withTwoFactor(): static
+
+    public function active(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'two_factor_secret' => encrypt('secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
-            'two_factor_confirmed_at' => now(),
-        ]);
+        return $this->state(fn() => ['is_active' => true]);
+    }
+    public function suspended(): static
+    {
+        return $this->state(fn() => ['is_active' => false]);
+    }
+    public function online(): static
+    {
+        return $this->state(fn() => ['is_online' => true]);
+    }
+    public function offline(): static
+    {
+        return $this->state(fn() => ['is_online' => false]);
+    }
+    public function unverified(): static
+    {
+        return $this->state(fn() => ['email_verified_at' => null]);
     }
 }
