@@ -5,6 +5,7 @@ namespace App\Actions\Orders;
 use App\Models\Order;
 use App\Models\User;
 use App\Support\AuditLogger;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 
 class AssignRiderAction
@@ -12,7 +13,7 @@ class AssignRiderAction
     public function handle(Order $order, ?int $riderId): RedirectResponse
     {
         if ($riderId !== null) {
-            User::where('id', $riderId)->where('role', 'rider')->where('is_active', true)->where('is_online',true)->whereNotNull('email_verified_at')->firstOrFail();
+            User::where('id', $riderId)->where('role', 'rider')->where('is_active', true)->where('is_online', true)->whereNotNull('email_verified_at')->firstOrFail();
         }
 
         $order->delivery()->update([

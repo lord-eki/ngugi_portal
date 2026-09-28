@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
+    use HasFactory;
+    
     protected $fillable = [
         'order_id', 'method', 'phone', 'till_code'
         , 'card_number', 'card_expiry', 'card_cvc',

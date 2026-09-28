@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Delivery extends Model
 {
+    use HasFactory;
+    
     protected $fillable = [
         'order_id',
+        'rider_id',
         'location_mode',
         'manual_address',
         'delivery_code',
@@ -20,7 +24,8 @@ class Delivery extends Model
         'scheduled_time',
         'notes',
         'contact_phone',
-        'contact_name'
+        'contact_name',
+        'assigned_at'
     ];
 
 

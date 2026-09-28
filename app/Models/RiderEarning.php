@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RiderEarning extends Model
 {
+    use HasFactory;
+    
     protected $fillable = ['rider_id', 'order_id', 'percentage', 'amount', 'status'];
 
     public function rider(): BelongsTo

@@ -13,7 +13,7 @@ it('rejects a withdrawal larger than the available balance', function () {
 });
 
 it('reserves earnings and calls B2C on a valid withdrawal request', function () {
-    Http::fake(['api.safaricom.co.ke/*' => Http::response([
+    Http::fake(['*' => Http::response([
         'ResponseCode' => '0',
         'ConversationID' => 'conv-123',
         'OriginatorConversationID' => 'orig-123',
@@ -21,7 +21,7 @@ it('reserves earnings and calls B2C on a valid withdrawal request', function () 
 
     $rider = User::factory()->rider()->active()->online()->create();
     $earning = RiderEarning::factory()->create(['rider_id' => $rider->id, 'amount' => 500, 'status' => 'available']);
-
+  
     $this->actingAs($rider)
         ->post('/rider/withdrawals', ['amount' => 500])
         ->assertRedirect();

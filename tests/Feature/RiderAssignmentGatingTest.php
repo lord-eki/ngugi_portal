@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\{User,Order};
+use App\Models\{Delivery, User,Order};
 
 it('refuses to assign an offline rider', function () {
     $admin = User::factory()->admin()->create();
@@ -9,7 +9,7 @@ it('refuses to assign an offline rider', function () {
 
     $this->actingAs($admin)
         ->post("/admin/orders/{$order->id}/assign-rider", ['rider_id' => $rider->id])
-        ->assertStatus(404); // firstOrFail() throws a 404 model-not-found
+        ->assertStatus(404); 
 
     expect($order->fresh()->delivery)->toBeNull();
 });
@@ -26,7 +26,7 @@ it('refuses to assign an unverified rider', function () {
 
 it('assigns a rider who is active, online, and verified', function () {
     $admin = User::factory()->admin()->create();
-    $order = Order::factory()->create();
+    $order = Order::factory()->has(Delivery::factory())->create();
     $rider = User::factory()->rider()->active()->online()->create();
 
     $this->actingAs($admin)

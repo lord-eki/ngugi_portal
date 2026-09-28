@@ -45,14 +45,15 @@ class RequestWithdrawalAction
             }
 
             $response = Mpesa::b2c(
-                $rider->phone,          // recipient MSISDN, 2547XXXXXXXX
+                $rider->phone,
+                'Business Payment',
                 $amount,
-                'BusinessPayment',      // command_id
-                'Delivery earnings',    // remarks
-                'Rider payout'          // occasion
+                'Delivery earnings - Rider Payout',
             );
 
             $data = $response->json();
+
+      
 
             if ($response->failed() || ($data['ResponseCode'] ?? null) !== '0') {
                 RiderEarning::where('withdrawal_id', $withdrawal->id)
