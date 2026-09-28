@@ -164,7 +164,7 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
             const unit = entry.type === "refill" ? sz.refillPrice : sz.newPrice;
 
             return acc + unit * entry.qty;
-        }, 0) + (Object.keys(sizes).length > 0 ? 150 : 0); 
+        }, 0) + (Object.keys(sizes).length > 0 ? 150 : 0);
 
     // Validation per step
     const canStep1 = name.trim().length > 1 && phone.trim().length >= 9;
