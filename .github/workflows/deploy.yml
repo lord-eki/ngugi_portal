@@ -1,0 +1,33 @@
+name: Deploy Laravel to Cpanel
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Cpanel
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{secrets.SSH_HOST}}
+          username: ${{secrets.SSH_USERNAME}}
+          port: ${{secrets.SSH_PORT}}
+          key: ${{secrets.SSH_PRIVATE_KEY}}
+          script: |
+            cd /home/lodekib/domains/bhebha.elinestech.co.ke/ngugi_portal
+            
+            git pull origin master
+
+            composer install --no-dev --optimize-autoloader
+
+            npm ci
+            npm run build
+
+            php artisan optimize:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
