@@ -425,7 +425,7 @@ export default function StepDelivery({
     const canProceed = isValid && (!needsTimeSlot || form.scheduledTime !== "");
 
     const locationTabs = [
-        { id: "pin" as const, label: "Pin on map" },
+        // { id: "pin" as const, label: "Pin on map" },
         { id: "manual" as const, label: "Type address" },
         { id: "someone-else" as const, label: "For someone" },
     ];
@@ -458,7 +458,7 @@ export default function StepDelivery({
                         </button>
                     ))}
                 </div>
-
+{/* 
                 {form.locationMode === "pin" && (
                     <div className="space-y-4">
                         <MapPicker
@@ -519,7 +519,7 @@ export default function StepDelivery({
                             </div>
                         </div>
                     </div>
-                )}
+                )} */}
                 {form.locationMode === "manual" && (
                     <div className="space-y-4">
                         <InputField

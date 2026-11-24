@@ -2,15 +2,11 @@ import { Link, router } from "@inertiajs/react";
 import { useState, useEffect } from "react";
 import Wizard from "@/components/OrderWizard/Wizard";
 
-// ── Subscription modal constants ───────────────────────────────────
-const BOTTLE_SIZES = [
-    { id: "500ml", refillPrice: 15, newPrice: 30 },
-    { id: "1L", refillPrice: 25, newPrice: 50 },
-    { id: "5L", refillPrice: 80, newPrice: 150 },
-    { id: "10L", refillPrice: 120, newPrice: 250 },
-    { id: "15L", refillPrice: 160, newPrice: 350 },
-    { id: "20L", refillPrice: 200, newPrice: 450 },
-];
+interface BottleSize {
+    bottle_size: string;
+    refill_price: number;
+    new_price: number;
+}
 
 const FREQ_OPTIONS = [
     {
@@ -80,50 +76,40 @@ interface SizeEntry {
     type: "refill" | "new";
 }
 
-// ── Step progress indicator ────────────────────────────────────────
+//  Step progress indicator 
 function StepDots({ current, total }: { current: number; total: number }) {
     return (
         <div className="flex items-center gap-1.5">
             {Array.from({ length: total }, (_, i) => (
                 <div
                     key={i}
-                    className={`rounded-full transition-all duration-300 ${
-                        i + 1 === current
-                            ? "h-2 w-5 bg-[#1A78C2]"
-                            : i + 1 < current
-                              ? "h-2 w-2 bg-[#1A4A7A]"
-                              : "h-2 w-2 bg-[#D4E8F5]"
-                    }`}
+                    className={`rounded-full transition-all duration-300 ${i + 1 === current
+                        ? "h-2 w-5 bg-[#1A78C2]"
+                        : i + 1 < current
+                            ? "h-2 w-2 bg-[#1A4A7A]"
+                            : "h-2 w-2 bg-[#D4E8F5]"
+                        }`}
                 />
             ))}
         </div>
     );
 }
 
-// ── Subscription modal ─────────────────────────────────────────────
-function SubscriptionModal({ onClose }: { onClose: () => void }) {
+//  Subscription modal 
+function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bottleSizes: BottleSize }) {
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
     const [done, setDone] = useState(false);
-
-    // Step 1 — personal details
     const [name, setName] = useState("");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
     const [address, setAddress] = useState("");
-
-    // Step 2 — frequency + schedule
     const [freq, setFreq] = useState<FreqId>("weekly");
     const [days, setDays] = useState<string[]>([]);
     const [time, setTime] = useState("");
-
-    // Step 3 — items
     const [sizes, setSizes] = useState<Record<string, SizeEntry>>({});
-
-    // Step 4 — payment
     const [payMethod, setPayMethod] = useState("mpesa-stk");
 
-    // Close on Escape
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
@@ -152,10 +138,9 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
     const patchSize = (id: string, patch: Partial<SizeEntry>) =>
         setSizes((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
 
-    // Calculated per-cycle total
     const cycleTotal =
         Object.entries(sizes).reduce((acc, [id, entry]) => {
-            const sz = BOTTLE_SIZES.find((s) => s.id === id);
+            const sz = bottleSizes.find((s) => s.id === id);
 
             if (!sz) {
                 return acc;
@@ -166,7 +151,6 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
             return acc + unit * entry.qty;
         }, 0) + (Object.keys(sizes).length > 0 ? 150 : 0);
 
-    // Validation per step
     const canStep1 = name.trim().length > 1 && phone.trim().length >= 9;
     const canStep2 = (freq === "daily" || days.length > 0) && time !== "";
     const canStep3 = Object.keys(sizes).length > 0;
@@ -175,24 +159,19 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
     const handleSubmit = () => {
         setSubmitting(true);
         const payload = {
-            // Personal
             name,
             phone,
             email,
             address,
-            // Schedule
             frequency: freq,
             days,
             time_slot: time,
-            // Items
             sizes: Object.entries(sizes).map(([id, entry]) => ({
                 size: id,
                 quantity: entry.qty,
                 type: entry.type,
             })),
-            // Payment
             payment_method: payMethod,
-            // Totals
             total_per_cycle: cycleTotal,
         };
 
@@ -368,7 +347,7 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                         </div>
                     )}
 
-                    {/* ── Step 1: Personal details ── */}
+                    {/*   Personal details  */}
                     {!done && step === 1 && (
                         <div className="space-y-4">
                             <div>
@@ -388,15 +367,13 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                 <label className="mb-1.5 block text-sm font-semibold text-[#2A4A6A]">
                                     Phone number{" "}
                                     <span className="text-red-400">*</span>
-                                    <span className="ml-1 font-normal text-[#8AA8C0]">
-                                        — for M-Pesa & SMS
-                                    </span>
+
                                 </label>
                                 <div className="flex gap-2">
                                     <div className="flex flex-shrink-0 items-center rounded-xl border border-[#C4DDEF] bg-[#F5F8FC] px-3 text-xs font-semibold text-[#4A6A8A]">
-                                        🇰🇪 +254
+                                        +254
                                     </div>
-                                    <input
+                                    <input required
                                         type="tel"
                                         value={phone}
                                         onChange={(e) =>
@@ -414,12 +391,11 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                             <div>
                                 <label className="mb-1.5 block text-sm font-semibold text-[#2A4A6A]">
                                     Email address
-                                    <span className="ml-1 font-normal text-[#8AA8C0]">
-                                        — optional, for confirmation
-                                    </span>
+                                    <span className="text-red-400">*</span>
+
                                 </label>
                                 <input
-                                    type="email"
+                                    type="email" required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="jane@example.com"
@@ -429,11 +405,10 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                             <div>
                                 <label className="mb-1.5 block text-sm font-semibold text-[#2A4A6A]">
                                     Delivery address
-                                    <span className="ml-1 font-normal text-[#8AA8C0]">
-                                        — optional for now
-                                    </span>
+                                    <span className="text-red-400">*</span>
+
                                 </label>
-                                <input
+                                <input required
                                     type="text"
                                     value={address}
                                     onChange={(e) => setAddress(e.target.value)}
@@ -442,13 +417,13 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                 />
                             </div>
                             <p className="rounded-xl bg-[#F5F8FC] px-3 py-2.5 text-xs text-[#8AA8C0]">
-                                🔒 Your details are used only for delivery and
+                                Your details are used only for delivery and
                                 billing. We never share them.
                             </p>
                         </div>
                     )}
 
-                    {/* ── Step 2: Frequency + schedule ── */}
+                    {/* Frequency + schedule  */}
                     {!done && step === 2 && (
                         <div className="space-y-5">
                             {/* Frequency cards */}
@@ -465,11 +440,10 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                                 setFreq(f.id);
                                                 setDays([]);
                                             }}
-                                            className={`relative rounded-2xl border-2 p-4 text-left transition-all ${
-                                                freq === f.id
-                                                    ? "border-[#1A4A7A] bg-[#EEF6FF]"
-                                                    : "border-[#D4E8F5] hover:border-[#9ECBE8]"
-                                            }`}
+                                            className={`relative rounded-2xl border-2 p-4 text-left transition-all ${freq === f.id
+                                                ? "border-[#1A4A7A] bg-[#EEF6FF]"
+                                                : "border-[#D4E8F5] hover:border-[#9ECBE8]"
+                                                }`}
                                         >
                                             <div
                                                 className={`absolute top-2.5 right-2.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold text-white ${f.color}`}
@@ -499,11 +473,10 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                                 key={d}
                                                 type="button"
                                                 onClick={() => toggleDay(d)}
-                                                className={`rounded-xl border-2 px-3 py-1.5 text-xs font-semibold transition-all ${
-                                                    days.includes(d)
-                                                        ? "border-[#1A4A7A] bg-[#1A4A7A] text-white"
-                                                        : "border-[#D4E8F5] bg-white text-[#4A6A8A] hover:border-[#1A4A7A]"
-                                                }`}
+                                                className={`rounded-xl border-2 px-3 py-1.5 text-xs font-semibold transition-all ${days.includes(d)
+                                                    ? "border-[#1A4A7A] bg-[#1A4A7A] text-white"
+                                                    : "border-[#D4E8F5] bg-white text-[#4A6A8A] hover:border-[#1A4A7A]"
+                                                    }`}
                                             >
                                                 {d.slice(0, 3)}
                                             </button>
@@ -523,11 +496,10 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                             key={t}
                                             type="button"
                                             onClick={() => setTime(t)}
-                                            className={`rounded-xl border-2 px-1 py-2.5 text-center text-xs font-medium transition-all ${
-                                                time === t
-                                                    ? "border-[#1A4A7A] bg-[#1A4A7A] text-white"
-                                                    : "border-[#D4E8F5] bg-white text-[#4A6A8A] hover:border-[#9ECBE8]"
-                                            }`}
+                                            className={`rounded-xl border-2 px-1 py-2.5 text-center text-xs font-medium transition-all ${time === t
+                                                ? "border-[#1A4A7A] bg-[#1A4A7A] text-white"
+                                                : "border-[#D4E8F5] bg-white text-[#4A6A8A] hover:border-[#9ECBE8]"
+                                                }`}
                                         >
                                             {t}
                                         </button>
@@ -537,7 +509,7 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                         </div>
                     )}
 
-                    {/* ── Step 3: Items ── */}
+                    {/* Items  */}
                     {!done && step === 3 && (
                         <div className="space-y-4">
                             <p className="text-xs font-bold text-[#2A4A6A]">
@@ -551,11 +523,10 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                         key={s.id}
                                         type="button"
                                         onClick={() => toggleSize(s.id)}
-                                        className={`rounded-xl border-2 p-3 text-left transition-all ${
-                                            sizes[s.id]
-                                                ? "border-[#1A4A7A] bg-[#EEF6FF]"
-                                                : "border-[#D4E8F5] hover:border-[#9ECBE8]"
-                                        }`}
+                                        className={`rounded-xl border-2 p-3 text-left transition-all ${sizes[s.id]
+                                            ? "border-[#1A4A7A] bg-[#EEF6FF]"
+                                            : "border-[#D4E8F5] hover:border-[#9ECBE8]"
+                                            }`}
                                     >
                                         {sizes[s.id] && (
                                             <span className="mb-1 block flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1A4A7A]">
@@ -623,11 +594,10 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                                                     { type: t },
                                                                 )
                                                             }
-                                                            className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${
-                                                                entry.type === t
-                                                                    ? "border-[#1A4A7A] bg-[#1A4A7A] text-white"
-                                                                    : "border-[#D4E8F5] bg-white text-[#4A6A8A] hover:border-[#1A4A7A]"
-                                                            }`}
+                                                            className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${entry.type === t
+                                                                ? "border-[#1A4A7A] bg-[#1A4A7A] text-white"
+                                                                : "border-[#D4E8F5] bg-white text-[#4A6A8A] hover:border-[#1A4A7A]"
+                                                                }`}
                                                         >
                                                             {t === "refill"
                                                                 ? "Refill"
@@ -645,7 +615,7 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                                                 qty: Math.max(
                                                                     1,
                                                                     entry.qty -
-                                                                        1,
+                                                                    1,
                                                                 ),
                                                             })
                                                         }
@@ -711,7 +681,7 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                         </div>
                     )}
 
-                    {/* ── Step 4: Payment + summary ── */}
+                    {/* Payment + summary  */}
                     {!done && step === 4 && (
                         <div className="space-y-4">
                             <div>
@@ -723,11 +693,10 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                         key={p.id}
                                         type="button"
                                         onClick={() => setPayMethod(p.id)}
-                                        className={`mb-2 flex w-full items-start justify-between rounded-xl border-2 px-4 py-3.5 text-left transition-all ${
-                                            payMethod === p.id
-                                                ? "border-[#1A4A7A] bg-[#EEF6FF]"
-                                                : "border-[#D4E8F5] hover:border-[#9ECBE8]"
-                                        }`}
+                                        className={`mb-2 flex w-full items-start justify-between rounded-xl border-2 px-4 py-3.5 text-left transition-all ${payMethod === p.id
+                                            ? "border-[#1A4A7A] bg-[#EEF6FF]"
+                                            : "border-[#D4E8F5] hover:border-[#9ECBE8]"
+                                            }`}
                                     >
                                         <div>
                                             <div
@@ -740,11 +709,10 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                             </div>
                                         </div>
                                         <div
-                                            className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all ${
-                                                payMethod === p.id
-                                                    ? "border-[#1A4A7A] bg-[#1A4A7A]"
-                                                    : "border-[#C4DDEF]"
-                                            }`}
+                                            className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all ${payMethod === p.id
+                                                ? "border-[#1A4A7A] bg-[#1A4A7A]"
+                                                : "border-[#C4DDEF]"
+                                                }`}
                                         >
                                             {payMethod === p.id && (
                                                 <svg
@@ -869,7 +837,7 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                     )}
                 </div>
 
-                {/* ── Footer nav ── */}
+                {/*  Footer nav  */}
                 {!done && (
                     <div className="flex flex-shrink-0 gap-3 border-t border-[#D4E8F5] bg-white px-6 py-4">
                         <button
@@ -891,8 +859,8 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
                                     step === 1
                                         ? !canStep1
                                         : step === 2
-                                          ? !canStep2
-                                          : !canStep3
+                                            ? !canStep2
+                                            : !canStep3
                                 }
                                 className="flex-[2] rounded-xl bg-[#1A4A7A] py-3 text-sm font-semibold text-white shadow-lg shadow-[#1A4A7A]/20 transition-all hover:bg-[#0D2A47] disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                             >
@@ -940,8 +908,21 @@ function SubscriptionModal({ onClose }: { onClose: () => void }) {
     );
 }
 
-// ── Main welcome page ──────────────────────────────────────────────
-export default function Welcome() {
+//  Main welcome page 
+export default function Welcome({
+    prices,
+}: {
+    prices: {
+        bottle_size: string;
+        refill_price: number | string;
+        new_price: number | string;
+    }[];
+}) {
+    const BOTTLE_SIZES: BottleSize[] = prices.map((price) => ({
+        bottle_size: price.bottle_size,
+        refill_price: Number(price.refill_price),
+        new_price: Number(price.new_price),
+    }));
     const [scrolled, setScrolled] = useState(false);
     const [orderOpen, setOrderOpen] = useState(false);
     const [subOpen, setSubOpen] = useState(false);
@@ -955,7 +936,7 @@ export default function Welcome() {
 
     return (
         <div className="min-h-screen bg-[#F5F3EE] font-sans">
-            {/* NAV */}
+            {/* nav */}
             <nav
                 className={`fixed top-0 right-0 left-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 shadow-sm backdrop-blur-md" : "bg-transparent"}`}
             >
@@ -1092,7 +1073,7 @@ export default function Welcome() {
                                     M-Pesa
                                 </div>
                                 <div className="mt-0.5 text-xs text-[#6A8AA8]">
-                                    & card accepted
+                                    payment accepted
                                 </div>
                             </div>
                         </div>
@@ -1171,10 +1152,10 @@ export default function Welcome() {
                                 </div>
                                 <div className="text-center">
                                     <p className="text-lg font-bold text-[#0D2A47]">
-                                        20L Refillable
+                                        All sizes refillable
                                     </p>
                                     <p className="text-sm text-[#6A8AA8]">
-                                        KES 200 · 2 hr delivery
+                                        Affordable . Speedy delivery
                                     </p>
                                 </div>
                                 <div className="mt-4 flex items-center gap-2">
@@ -1182,7 +1163,7 @@ export default function Welcome() {
                                         <div className="h-full w-3/4 rounded-full bg-[#1A78C2]" />
                                     </div>
                                     <span className="text-xs text-[#6A8AA8]">
-                                        3 left
+
                                     </span>
                                 </div>
                                 <div className="mt-4 flex items-center gap-2 rounded-xl bg-[#E8F5E8] px-3 py-2 text-xs text-[#3A7A3A]">
@@ -1209,7 +1190,7 @@ export default function Welcome() {
                 </div>
             </section>
 
-            {/* HOW IT WORKS */}
+            {/* How it works*/}
             <section id="how-it-works" className="bg-white py-24">
                 <div className="mx-auto max-w-5xl px-6">
                     <div className="mb-16 text-center">
@@ -1278,7 +1259,7 @@ export default function Welcome() {
                             {
                                 step: "03",
                                 title: "Pay & relax",
-                                desc: "M-Pesa STK push, till number, or card. Instant SMS confirmation the moment it goes through.",
+                                desc: "Receive an instant Mpesa prompt on your phone. Enter pin and you're good to go.",
                                 icon: (
                                     <svg
                                         width="28"
@@ -1347,53 +1328,45 @@ export default function Welcome() {
                             family. Refill or brand new — you decide.
                         </p>
                     </div>
+
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                        {[
-                            { size: "500ml", refill: "KES 15", new: "KES 30" },
-                            { size: "1L", refill: "KES 25", new: "KES 50" },
-                            { size: "5L", refill: "KES 80", new: "KES 150" },
-                            { size: "10L", refill: "KES 120", new: "KES 250" },
-                            { size: "15L", refill: "KES 160", new: "KES 350" },
-                            {
-                                size: "20L",
-                                refill: "KES 200",
-                                new: "KES 450",
-                                popular: true,
-                            },
-                        ].map((item) => (
+                        {BOTTLE_SIZES.map((item) => (
                             <div
-                                key={item.size}
-                                className={`relative rounded-2xl bg-white p-5 ${item.popular ? "ring-2 ring-[#1A78C2]" : ""}`}
+                                key={item.bottle_size}
+                                className={`relative rounded-2xl bg-white p-5 ${item.bottle_size === "20l"
+                                        ? "ring-2 ring-[#1A78C2]"
+                                        : ""
+                                    }`}
                             >
-                                {item.popular && (
+                                {item.bottle_size === "20l" && (
                                     <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-[#1A78C2] px-3 py-0.5 text-xs font-semibold whitespace-nowrap text-white">
                                         Most popular
                                     </span>
                                 )}
+
                                 <div className="mb-3 text-2xl font-black text-[#0D2A47]">
-                                    {item.size}
+                                    {item.bottle_size}
                                 </div>
+
                                 <div className="space-y-1.5">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-[#6A8AA8]">
-                                            Refill
-                                        </span>
+                                        <span className="text-[#6A8AA8]">Refill</span>
                                         <span className="font-semibold text-[#1A4A7A]">
-                                            {item.refill}
+                                            KES {item.refill_price.toLocaleString()}
                                         </span>
                                     </div>
+
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-[#6A8AA8]">
-                                            Brand new
-                                        </span>
+                                        <span className="text-[#6A8AA8]">Brand new</span>
                                         <span className="font-semibold text-[#1A4A7A]">
-                                            {item.new}
+                                            KES {item.new_price.toLocaleString()}
                                         </span>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
+
                     <div className="mt-8 text-center">
                         <button
                             onClick={() => setOrderOpen(true)}
@@ -1405,7 +1378,7 @@ export default function Welcome() {
                 </div>
             </section>
 
-            {/* SUBSCRIPTIONS — now with inline form trigger */}
+            {/* SUBSCRIPTIONS  */}
             <section id="subscriptions" className="bg-[#0D2A47] py-24">
                 <div className="mx-auto max-w-5xl px-6">
                     <div className="grid items-center gap-12 md:grid-cols-2">
@@ -1418,17 +1391,16 @@ export default function Welcome() {
                             </h2>
                             <p className="mb-8 leading-relaxed text-[#8AB8D8]">
                                 Set a daily, weekly, biweekly, or monthly
-                                schedule. We auto-bill via M-Pesa or card and
+                                schedule. We auto-bill via M-Pesa and
                                 notify you before every charge.{" "}
                                 <span className="font-semibold text-white">
                                     No account needed
                                 </span>{" "}
-                                — just your name and phone.
+                                — just your name , phone and email.
                             </p>
                             <ul className="mb-8 space-y-3">
                                 {[
                                     "Automated M-Pesa billing",
-                                    "SMS before every delivery",
                                     "Pause or cancel anytime",
                                     "Priority scheduling",
                                 ].map((f) => (
@@ -1575,7 +1547,7 @@ export default function Welcome() {
 
             {/* Modals */}
             {orderOpen && <Wizard onClose={() => setOrderOpen(false)} />}
-            {subOpen && <SubscriptionModal onClose={() => setSubOpen(false)} />}
+            {subOpen && <SubscriptionModal onClose={() => setSubOpen(false)} bottleSizes={BOTTLE_SIZES} />}
         </div>
     );
 }

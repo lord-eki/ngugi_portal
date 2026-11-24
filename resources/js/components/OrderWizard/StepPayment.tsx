@@ -287,13 +287,13 @@ export default function StepPayment({
                 <div className="space-y-2">
                     {(
                         [
-                            // { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push', sub: 'You\'ll get a prompt on your phone', badge: 'Recommended' },
-                            {
-                                id: "mpesa-till" as const,
-                                label: "M-Pesa Till Number",
-                                sub: "We'll send a prompt to your phone",
-                                badge: null,
-                            },
+                            { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push', sub: 'You\'ll get a prompt on your phone', badge: 'Recommended' },
+                            // {
+                            //     id: "mpesa-till" as const,
+                            //     label: "M-Pesa Till Number",
+                            //     sub: "We'll send a prompt to your phone",
+                            //     badge: null,
+                            // },
                             // { id: 'card' as const, label: 'Visa / Mastercard', sub: 'Secure card payment via Flutterwave', badge: null },
                         ] as const
                     ).map((opt) => {

@@ -2,7 +2,7 @@ import { Head, router } from "@inertiajs/react";
 import { useState, useMemo, useRef } from "react";
 import { dashboard } from "@/routes";
 
-// ── Types ──────────────────────────────────────────────────────────
+//  Types 
 interface OrderItem {
     id: number;
     type: "new" | "refill";
@@ -91,7 +91,7 @@ interface Props {
     refillers?: RefillerOption[];
 }
 
-// ── Style maps ─────────────────────────────────────────────────────
+//  Style maps 
 const S_STYLE: Record<string, { dot: string; badge: string }> = {
     pending: {
         dot: "bg-amber-400",
@@ -223,7 +223,7 @@ function fmtDate(iso: string) {
     });
 }
 
-// ── Sub-components ─────────────────────────────────────────────────
+//  Sub-components 
 function StatCard({
     label,
     value,
@@ -302,7 +302,7 @@ function InfoRow({
     );
 }
 
-// ── Order card ─────────────────────────────────────────────────────
+//  Order card 
 export function OrderCard({
     order,
     statusActions = ORDER_STATUS_ACTIONS,

@@ -1,33 +1,14 @@
 import { Link, usePage } from "@inertiajs/react";
-import { LayoutGrid, Menu, Droplet, Users } from "lucide-react";
+import { LayoutGrid, Menu, Droplet, Users, Settings } from "lucide-react";
 import AppLogo from "@/components/app-logo";
 import AppLogoIcon from "@/components/app-logo-icon";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-    NavigationMenu,
-    NavigationMenuItem,
-    NavigationMenuList,
-    navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { DropdownMenu,DropdownMenuContent,DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { NavigationMenu,NavigationMenuItem,NavigationMenuList,navigationMenuTriggerStyle} from "@/components/ui/navigation-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle,SheetTrigger} from "@/components/ui/sheet";
+import { Tooltip, TooltipContent,TooltipTrigger} from "@/components/ui/tooltip";
 import { UserMenuContent } from "@/components/user-menu-content";
 import { useCurrentUrl } from "@/hooks/use-current-url";
 import { useInitials } from "@/hooks/use-initials";
@@ -66,6 +47,11 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                       href: "/admin/refillers",
                       icon: Droplet,
                   },
+                  {
+                    title: "Set Prices",
+                    href: "/admin/prices",
+                    icon: Settings
+                  }
               ]
             : []),
     ];

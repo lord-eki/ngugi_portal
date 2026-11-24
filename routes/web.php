@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Orders\AssignRefillerAction;
+use App\Http\Controllers\Admin\PriceController;
 use App\Http\Controllers\Admin\RefillerController;
 use App\Http\Controllers\Admin\RiderController;
 use App\Http\Controllers\DashboardController;
@@ -12,13 +13,17 @@ use App\Http\Controllers\Rider\RiderEmailVerificationController;
 use App\Http\Controllers\RiderAvailabilityController;
 use App\Http\Controllers\WithdrawalController;
 use App\Models\Order;
+use App\Models\Price;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
+use Inertia\Inertia;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::get('/', function () {
+    $prices = Price::get();
+    
+    return Inertia::render('welcome',['prices' => $prices]);
+
+})->name('home');
 
 Route::resource('orders', OrderController::class);
 
@@ -67,6 +72,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/riders/{rider}/reset-password', [RiderController::class, 'resetPassword'])->name('riders.reset-password');
         Route::get('/riders/{rider}/password', [RiderController::class, 'revealPassword'])->name('riders.reveal-password');
 
+        Route::get('/prices',[PriceController::class, 'index'])->name('prices.index');
+        Route::post('/prices', [PriceController::class, 'store'])->name('prices.store');
+        Route::patch('/prices/{price}', [PriceController::class, 'update'])->name('prices.update');
+
         Route::get('/refillers', [RefillerController::class, 'index'])->name('refillers.index');
         Route::post('/refillers', [RefillerController::class, 'store'])->name('refillers.store');
         Route::post('/refillers/{refiller}/toggle-status', [RefillerController::class, 'toggleStatus'])->name('refillers.toggle-status');
@@ -89,7 +98,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::get('/rider/verify-email/{id}/{hash}', [RiderEmailVerificationController::class, 'verify'])->middleware('signed')->name('rider.verify-email');
-Route::post('/rider/resend-verification', [RiderEmailVerificationController::class, 'resend'])->middleware(['auth', 'role:rider','throttle:resend'])->name('rider.resend-verification');
+Route::post('/rider/resend-verification', [RiderEmailVerificationController::class, 'resend'])->middleware(['auth', 'role:rider', 'throttle:resend'])->name('rider.resend-verification');
 
 
 require __DIR__ . '/settings.php';
