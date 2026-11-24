@@ -1,6 +1,9 @@
-import { Link, router } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
 import { useState, useEffect } from "react";
 import Wizard from "@/components/OrderWizard/Wizard";
+import toast from "react-hot-toast";
+
+
 
 interface BottleSize {
     bottle_size: string;
@@ -96,7 +99,7 @@ function StepDots({ current, total }: { current: number; total: number }) {
 }
 
 //  Subscription modal 
-function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bottleSizes: BottleSize }) {
+function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bottleSizes: BottleSize[] }) {
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
     const [done, setDone] = useState(false);
@@ -140,13 +143,13 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
 
     const cycleTotal =
         Object.entries(sizes).reduce((acc, [id, entry]) => {
-            const sz = bottleSizes.find((s) => s.id === id);
+            const sz = bottleSizes.find((s) => s.bottle_size === id);
 
             if (!sz) {
                 return acc;
             }
 
-            const unit = entry.type === "refill" ? sz.refillPrice : sz.newPrice;
+            const unit = entry.type === "refill" ? sz.refill_price : sz.new_price;
 
             return acc + unit * entry.qty;
         }, 0) + (Object.keys(sizes).length > 0 ? 150 : 0);
@@ -518,17 +521,17 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
 
                             {/* Size toggle grid */}
                             <div className="grid grid-cols-3 gap-2">
-                                {BOTTLE_SIZES.map((s) => (
+                                {bottleSizes.map((s) => (
                                     <button
-                                        key={s.id}
+                                        key={s.bottle_size}
                                         type="button"
-                                        onClick={() => toggleSize(s.id)}
-                                        className={`rounded-xl border-2 p-3 text-left transition-all ${sizes[s.id]
+                                        onClick={() => toggleSize(s.bottle_size)}
+                                        className={`rounded-xl border-2 p-3 text-left transition-all ${sizes[s.bottle_size]
                                             ? "border-[#1A4A7A] bg-[#EEF6FF]"
                                             : "border-[#D4E8F5] hover:border-[#9ECBE8]"
                                             }`}
                                     >
-                                        {sizes[s.id] && (
+                                        {sizes[s.bottle_size] && (
                                             <span className="mb-1 block flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1A4A7A]">
                                                 <svg
                                                     width="7"
@@ -547,10 +550,10 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                             </span>
                                         )}
                                         <div className="text-sm font-bold text-[#0D2A47]">
-                                            {s.id}
+                                            {s.bottle_size}
                                         </div>
                                         <div className="text-[10px] text-[#8AA8C0]">
-                                            from KES {s.refillPrice}
+                                            from KES {s.refill_price}
                                         </div>
                                     </button>
                                 ))}
@@ -559,22 +562,22 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                             {/* Per-size config */}
                             {Object.keys(sizes).length > 0 && (
                                 <div className="space-y-2">
-                                    {BOTTLE_SIZES.filter(
-                                        (s) => sizes[s.id],
+                                    {bottleSizes.filter(
+                                        (s) => sizes[s.bottle_size],
                                     ).map((s) => {
-                                        const entry = sizes[s.id];
+                                        const entry = sizes[s.bottle_size];
                                         const unit =
                                             entry.type === "refill"
-                                                ? s.refillPrice
-                                                : s.newPrice;
+                                                ? s.refill_price
+                                                : s.new_price;
 
                                         return (
                                             <div
-                                                key={s.id}
+                                                key={s.bottle_size}
                                                 className="flex items-center gap-3 rounded-xl border border-[#D4E8F5] bg-[#F5F8FC] px-4 py-3"
                                             >
                                                 <span className="w-10 flex-shrink-0 text-sm font-bold text-[#0D2A47]">
-                                                    {s.id}
+                                                    {s.bottle_size}
                                                 </span>
 
                                                 {/* Refill / New toggle */}
@@ -590,7 +593,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                                             type="button"
                                                             onClick={() =>
                                                                 patchSize(
-                                                                    s.id,
+                                                                    s.bottle_size,
                                                                     { type: t },
                                                                 )
                                                             }
@@ -611,7 +614,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            patchSize(s.id, {
+                                                            patchSize(s.bottle_size, {
                                                                 qty: Math.max(
                                                                     1,
                                                                     entry.qty -
@@ -629,7 +632,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            patchSize(s.id, {
+                                                            patchSize(s.bottle_size, {
                                                                 qty:
                                                                     entry.qty +
                                                                     1,
@@ -918,6 +921,9 @@ export default function Welcome({
         new_price: number | string;
     }[];
 }) {
+
+
+
     const BOTTLE_SIZES: BottleSize[] = prices.map((price) => ({
         bottle_size: price.bottle_size,
         refill_price: Number(price.refill_price),
@@ -926,6 +932,31 @@ export default function Welcome({
     const [scrolled, setScrolled] = useState(false);
     const [orderOpen, setOrderOpen] = useState(false);
     const [subOpen, setSubOpen] = useState(false);
+
+    const page = usePage();
+
+    const flash = (page.props as typeof page.props & {
+        flash?: {
+            success?: string;
+            error?: string;
+        };
+    }).flash;
+
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success, {
+                duration: 5000,
+                position: "top-right",
+            });
+        }
+
+        if (flash?.error) {
+            toast.error(flash.error, {
+                duration: 5000,
+                position: "top-right",
+            });
+        }
+    }, [flash?.success, flash?.error]);
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 40);
@@ -1334,8 +1365,8 @@ export default function Welcome({
                             <div
                                 key={item.bottle_size}
                                 className={`relative rounded-2xl bg-white p-5 ${item.bottle_size === "20l"
-                                        ? "ring-2 ring-[#1A78C2]"
-                                        : ""
+                                    ? "ring-2 ring-[#1A78C2]"
+                                    : ""
                                     }`}
                             >
                                 {item.bottle_size === "20l" && (

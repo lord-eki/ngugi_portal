@@ -2,51 +2,44 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSubscriptionRequest;
+use App\Models\Price;
 use App\Models\Subscription;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class SubscriptionController extends Controller
 {
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreSubscriptionRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name'             => ['required', 'string', 'max:100'],
-            'phone'            => ['required', 'string', 'min:9', 'max:12'],
-            'email'            => ['nullable', 'email', 'max:150'],
-            'address'          => ['nullable', 'string', 'max:255'],
-            'frequency'        => ['required', 'in:daily,weekly,biweekly,monthly'],
-            'days'             => ['nullable', 'array'],
-            'days.*'           => ['string', 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
-            'time_slot'        => ['required', 'string'],
-            'sizes'            => ['required', 'array', 'min:1'],
-            'sizes.*.size'     => ['required', 'string'],
-            'sizes.*.quantity' => ['required', 'integer', 'min:1'],
-            'sizes.*.type'     => ['required', 'in:refill,new'],
-            'payment_method'   => ['required', 'in:mpesa-stk,card'],
-        ]);
+        $data = $request->validated();
+        $prices = Price::all()->keyBy('bottle_size');
 
-        $userId = Auth::id();
+        $sizesWithAmounts = array_map(function ($item) use ($prices) {
+            $price = $prices->get($item['size']);
 
-        $sizesWithAmounts = array_map(function ($item) {
-            $prices = [
-                '500ml' => ['refill' => 15,  'new' => 30],
-                '1L'    => ['refill' => 25,  'new' => 50],
-                '5L'    => ['refill' => 80,  'new' => 150],
-                '10L'   => ['refill' => 120, 'new' => 250],
-                '15L'   => ['refill' => 160, 'new' => 350],
-                '20L'   => ['refill' => 200, 'new' => 450],
-            ];
-            $unit = $prices[$item['size']][$item['type']] ?? 0;
-            return array_merge($item, ['amount' => $unit * $item['quantity']]);
+            if (!$price) {
+                throw ValidationException::withMessages([
+                    'sizes' => "Price for {$item['size']} is not configured.",
+                ]);
+            }
+
+            $unit = $item['type'] === 'refill'
+                ? $price->refill_price
+                : $price->new_price;
+
+            return array_merge($item, [
+                'amount' => (float) $unit * (int) $item['quantity'],
+            ]);
         }, $data['sizes']);
 
-        $total = Subscription::calculateTotal($data['sizes']);
+        $total = Subscription::calculateTotal($data['sizes'], $prices);
 
         $subscription = Subscription::create([
-            'user_id'         => $userId,
+            'user_id'         => Auth::id(),
             'name'            => $data['name'],
             'phone'           => $data['phone'],
             'email'           => $data['email'] ?? null,
@@ -64,9 +57,10 @@ class SubscriptionController extends Controller
             'next_delivery_at' => $subscription->calculateNextDelivery(),
         ]);
 
-        // TODO: EMAIL confirmation
-
-        return back()->with('subscription_created', true);
+        return back()->with(
+            'success',
+            'Your subscription has been submitted successfully! We will contact you shortly to confirm your delivery.'
+        );
     }
 
 
@@ -95,7 +89,7 @@ class SubscriptionController extends Controller
     }
 
 
- 
+
     public function activate(Subscription $subscription): RedirectResponse
     {
         abort_if(! Auth::check(), 403);
@@ -119,5 +113,4 @@ class SubscriptionController extends Controller
 
         return back()->with('success', 'Subscription cancelled.');
     }
-
 }

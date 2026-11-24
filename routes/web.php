@@ -58,7 +58,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])
         ->name('orders.cancel');
 
-    Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
     Route::post('/subscriptions/{subscription}/pause', [SubscriptionController::class, 'pause'])->name('subscriptions.pause');
     Route::post('/subscriptions/{subscription}/resume', [SubscriptionController::class, 'resume'])->name('subscriptions.resume');
     Route::post('/subscriptions/{subscription}/activate', [SubscriptionController::class, 'activate'])->name('subscriptions.activate');
@@ -97,6 +96,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
+Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
 Route::get('/rider/verify-email/{id}/{hash}', [RiderEmailVerificationController::class, 'verify'])->middleware('signed')->name('rider.verify-email');
 Route::post('/rider/resend-verification', [RiderEmailVerificationController::class, 'resend'])->middleware(['auth', 'role:rider', 'throttle:resend'])->name('rider.resend-verification');
 

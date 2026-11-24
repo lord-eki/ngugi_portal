@@ -10,11 +10,20 @@ class Subscription extends Model
 {
     protected $fillable = [
         'user_id',
-        'name', 'phone', 'email', 'address',
-        'frequency', 'days', 'time_slot',
-        'sizes', 'total_per_cycle',
-        'payment_method', 'status',
-        'admin_notes', 'next_delivery_at', 'last_delivery_at',
+        'name',
+        'phone',
+        'email',
+        'address',
+        'frequency',
+        'days',
+        'time_slot',
+        'sizes',
+        'total_per_cycle',
+        'payment_method',
+        'status',
+        'admin_notes',
+        'next_delivery_at',
+        'last_delivery_at',
     ];
 
     protected $casts = [
@@ -44,11 +53,26 @@ class Subscription extends Model
     }
 
 
-    public function isGuest(): bool     { return $this->user_id === null; }
-    public function isPending(): bool   { return $this->status === 'pending'; }
-    public function isActive(): bool    { return $this->status === 'active'; }
-    public function isPaused(): bool    { return $this->status === 'paused'; }
-    public function isCancelled(): bool { return $this->status === 'cancelled'; }
+    public function isGuest(): bool
+    {
+        return $this->user_id === null;
+    }
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+    public function isPaused(): bool
+    {
+        return $this->status === 'paused';
+    }
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
+    }
 
 
     public function getFrequencyLabelAttribute(): string
@@ -94,24 +118,30 @@ class Subscription extends Model
         return $from->copy()->addDays(7)->setTime(8, 0);
     }
 
+   
+public static function calculateTotal(array $sizes, $prices = null): int
+{
+    $prices = $prices ?? Price::all()->keyBy('bottle_size');
 
-    public static function calculateTotal(array $sizes): int
-    {
-        $prices = [
-            '500ml' => ['refill' => 15,  'new' => 30],
-            '1L'    => ['refill' => 25,  'new' => 50],
-            '5L'    => ['refill' => 80,  'new' => 150],
-            '10L'   => ['refill' => 120, 'new' => 250],
-            '15L'   => ['refill' => 160, 'new' => 350],
-            '20L'   => ['refill' => 200, 'new' => 450],
-        ];
+    $total = 100;
 
-        $total = 150; 
-        foreach ($sizes as $item) {
-            $unit   = $prices[$item['size']][$item['type']] ?? 0;
-            $total += $unit * $item['quantity'];
+    foreach ($sizes as $item) {
+        $price = $prices->get($item['size']);
+
+        if (!$price) {
+            throw new \InvalidArgumentException(
+                "Price for {$item['size']} is not configured."
+            );
         }
 
-        return $total;
+        $unit = $item['type'] === 'refill'
+            ? $price->refill_price
+            : $price->new_price;
+
+        $total += (float) $unit * (int) $item['quantity'];
     }
+
+    return (int) $total;
+}
+
 }
