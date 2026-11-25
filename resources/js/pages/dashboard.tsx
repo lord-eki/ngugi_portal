@@ -2,7 +2,6 @@ import { Head, router } from "@inertiajs/react";
 import { useState, useMemo, useRef } from "react";
 import { dashboard } from "@/routes";
 
-//  Types 
 interface OrderItem {
     id: number;
     type: "new" | "refill";
@@ -398,17 +397,17 @@ export function OrderCard({
                             </span>
                             {order.delivery_speed === "instant" && (
                                 <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                    ⚡ Instant
+                                     Instant
                                 </span>
                             )}
                             {order.payment?.status === "pending" && (
                                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                                    ⏳ Payment unverified
+                                     Payment unverified
                                 </span>
                             )}
                         </div>
                         <p className="mt-0.5 text-xs text-[#8AA8C0]">
-                            {timeAgo(order.created_at)} · {order.items.length}{" "}
+                            {fmtDate(order.created_at)} · {timeAgo(order.created_at)}{" "} 
                             item{order.items.length !== 1 ? "s" : ""}
                             {receiver ? ` · ${receiver.name}` : ""}
                             {order.delivery?.address
@@ -504,12 +503,12 @@ export function OrderCard({
 
                         {order.delivery?.delivery_code &&
                             order.status === "out_for_delivery" && (
-                                <div className="flex items-center justify-between rounded-xl border border-[#D4E8F5] bg-[#F5F8FC] p-3">
+                                <div className="inline-flex items-center gap-4 justify-between rounded-xl border border-[#D4E8F5] bg-[#F5F8FC] px-3 py-2">
                                     <div>
                                         <p className="text-[10px] font-semibold text-[#8AA8C0]">
                                             Delivery code
                                         </p>
-                                        <p className="font-mono font-bold text-[#0D2A47]">
+                                        <p className="font-mono font-bold tracking-widest text-[#0D2A47]">
                                             {order.delivery.delivery_code}
                                         </p>
                                     </div>
@@ -517,7 +516,7 @@ export function OrderCard({
                                         type="button"
                                         onClick={() =>
                                             router.post(
-                                                `/orders/${order.id}/resend-delivery-code`,
+                                                `/admin/orders/${order.id}/resend-delivery-code`,
                                                 {},
                                                 { preserveScroll: true },
                                             )
@@ -556,7 +555,7 @@ export function OrderCard({
                                             </p>
                                             {receiver.phone && (
                                                 <p className="mt-0.5 text-xs font-medium text-[#1A78C2]">
-                                                    +254{receiver.phone}
+                                                    +{receiver.phone}
                                                 </p>
                                             )}
                                         </div>
@@ -577,7 +576,7 @@ export function OrderCard({
                                             <p className="mb-1.5 text-[10px] font-semibold text-[#8AA8C0]">
                                                 Assigned rider
                                             </p>
-                                            <select
+                                            <select required
                                                 defaultValue={
                                                     order.delivery.rider?.id ??
                                                     ""
@@ -614,7 +613,7 @@ export function OrderCard({
                                             <p className="mb-1.5 text-[10px] font-semibold text-[#8AA8C0]">
                                                 💧 Refiller
                                             </p>
-                                            <select
+                                            <select required
                                                 defaultValue={
                                                     order.refiller?.id ?? ""
                                                 }
@@ -778,7 +777,7 @@ export function OrderCard({
                             {actions.some(
                                 (a) => a.next === "out_for_delivery",
                             ) &&
-                                !order.delivery?.rider && (
+                                !order.delivery?.rider &&  (
                                     <p className="mt-2 text-[11px] text-[#8AA8C0]">
                                         Assign a rider above before dispatching
                                         this order.

@@ -22,10 +22,8 @@ it('reserves earnings and calls B2C on a valid withdrawal request', function () 
     $rider = User::factory()->rider()->active()->online()->create();
     $earning = RiderEarning::factory()->create(['rider_id' => $rider->id, 'amount' => 500, 'status' => 'available']);
   
-    $this->actingAs($rider)
-        ->post('/rider/withdrawals', ['amount' => 500])
-        ->assertRedirect();
-
+    $this->actingAs($rider)->post('/rider/withdrawals', ['amount' => 500])->assertRedirect();
+       
     expect($earning->fresh()->status)->toBe('reserved');
     $this->assertDatabaseHas('withdrawals', ['rider_id' => $rider->id, 'amount' => 500, 'status' => 'processing']);
 });

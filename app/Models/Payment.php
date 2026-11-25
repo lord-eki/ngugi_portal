@@ -11,9 +11,7 @@ class Payment extends Model
     use HasFactory;
     
     protected $fillable = [
-        'order_id', 'method', 'phone', 'till_code'
-        , 'card_number', 'card_expiry', 'card_cvc',
-
+        'order_id', 'method', 'phone', 'till_code',
         'status','checkout_request_id','merchant_request_id','mpesa_receipt_number',
         'result_code','result_description'
     ];
@@ -22,7 +20,6 @@ class Payment extends Model
         'result_code' => 'integer'
     ];
 
-    protected $hidden = ['card_number', 'card_expiry', 'card_cvc'];
 
 
     public function order(): BelongsTo
@@ -34,9 +31,8 @@ class Payment extends Model
     public function getMethodLabelAttribute(): string
     {
         return match ($this->method) {
-            // 'mpesa-stk'  => 'M-Pesa STK Push',
+            'mpesa-stk'  => 'M-Pesa STK Push',
             'mpesa-till' => 'M-Pesa Till',
-            // 'card'       => 'Card',
             default      => $this->method,
         };
     }

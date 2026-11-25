@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -29,8 +30,12 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
+        Model::preventSilentlyDiscardingAttributes(!app()->isProduction());
+
+        RateLimiter::for('checkout', fn (Request $r) => Limit::perMinute(5)->by($r->ip()));
+
         RateLimiter::for('login', function (Request $request) {
-            $key = Str::trasliterate(Str::lower($request->input('email')) . '|' . $request->ip());
+            $key = Str::transliterate(Str::lower($request->input('email')) . '|' . $request->ip());
             return Limit::perMinute(5)->by($key);
         });
 

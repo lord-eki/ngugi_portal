@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePriceRequest;
+use App\Http\Requests\UpdatePriceRequest;
 use App\Models\Price;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -54,9 +55,12 @@ class PriceController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Price $price)
+    public function update(UpdatePriceRequest $request, Price $price)
     {
-        //
+        $price->update($request->validated());
+
+        Inertia::flash('toast',['type' => 'success' , 'message' => "Price updated for bottle size {$price->bottle_size}"]);
+        return back();
     }
 
     /**

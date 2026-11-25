@@ -1,7 +1,8 @@
-import { Link, router, usePage } from "@inertiajs/react";
-import { useState, useEffect } from "react";
+import { Link, router } from "@inertiajs/react";
+import { useState, useEffect, useMemo } from "react";
 import Wizard from "@/components/OrderWizard/Wizard";
-import toast from "react-hot-toast";
+import type { Fees, SizeOption } from "@/components/OrderWizard/Wizard";
+import { toast } from "sonner";
 
 
 
@@ -9,6 +10,14 @@ interface BottleSize {
     bottle_size: string;
     refill_price: number;
     new_price: number;
+}
+
+interface PriceProp {
+    bottle_size: string;
+    refill_price: number | string;
+    new_price: number | string;
+    has_bundle: boolean | number;
+    bundle_options: number[] | null;
 }
 
 const FREQ_OPTIONS = [
@@ -79,7 +88,8 @@ interface SizeEntry {
     type: "refill" | "new";
 }
 
-//  Step progress indicator 
+
+
 function StepDots({ current, total }: { current: number; total: number }) {
     return (
         <div className="flex items-center gap-1.5">
@@ -98,8 +108,15 @@ function StepDots({ current, total }: { current: number; total: number }) {
     );
 }
 
-//  Subscription modal 
-function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bottleSizes: BottleSize[] }) {
+function SubscriptionModal({
+    onClose,
+    bottleSizes,
+    deliveryFee,
+}: {
+    onClose: () => void;
+    bottleSizes: BottleSize[];
+    deliveryFee: number;
+}) {
     const [step, setStep] = useState(1);
     const [submitting, setSubmitting] = useState(false);
     const [done, setDone] = useState(false);
@@ -152,7 +169,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
             const unit = entry.type === "refill" ? sz.refill_price : sz.new_price;
 
             return acc + unit * entry.qty;
-        }, 0) + (Object.keys(sizes).length > 0 ? 150 : 0);
+        }, 0) + (Object.keys(sizes).length > 0 ? deliveryFee : 0);
 
     const canStep1 = name.trim().length > 1 && phone.trim().length >= 9;
     const canStep2 = (freq === "daily" || days.length > 0) && time !== "";
@@ -161,6 +178,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
 
     const handleSubmit = () => {
         setSubmitting(true);
+       
         const payload = {
             name,
             phone,
@@ -175,15 +193,21 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                 type: entry.type,
             })),
             payment_method: payMethod,
-            total_per_cycle: cycleTotal,
         };
 
         router.post("/subscriptions", payload, {
+  
             onSuccess: () => {
                 setDone(true);
                 setSubmitting(false);
             },
-            onError: () => setSubmitting(false),
+            onError: (errors) => {
+                setSubmitting(false);
+                toast.error(
+                    Object.values(errors)[0] ??
+                    "Could not create your subscription. Please try again.",
+                );
+            },
         });
     };
 
@@ -197,7 +221,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
             }}
         >
             <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
-                {/* ── Header ── */}
+               
                 <div className="flex-shrink-0 bg-[#0D2A47] px-6 pt-6 pb-5">
                     <div className="mb-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -266,9 +290,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                     )}
                 </div>
 
-                {/* ── Body ── */}
                 <div className="flex-1 overflow-y-auto p-6">
-                    {/* ── Done state ── */}
                     {done && (
                         <div className="space-y-4 py-8 text-center">
                             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#E8F5E8]">
@@ -350,7 +372,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                         </div>
                     )}
 
-                    {/*   Personal details  */}
+                  
                     {!done && step === 1 && (
                         <div className="space-y-4">
                             <div>
@@ -426,10 +448,10 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                         </div>
                     )}
 
-                    {/* Frequency + schedule  */}
+                 
                     {!done && step === 2 && (
                         <div className="space-y-5">
-                            {/* Frequency cards */}
+                           
                             <div>
                                 <p className="mb-2.5 text-xs font-bold text-[#2A4A6A]">
                                     How often?
@@ -464,7 +486,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                 </div>
                             </div>
 
-                            {/* Day picker — not for daily */}
+                          
                             {freq !== "daily" && (
                                 <div>
                                     <p className="mb-2.5 text-xs font-bold text-[#2A4A6A]">
@@ -488,7 +510,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                 </div>
                             )}
 
-                            {/* Time slot */}
+                       
                             <div>
                                 <p className="mb-2.5 text-xs font-bold text-[#2A4A6A]">
                                     Preferred time slot
@@ -512,14 +534,14 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                         </div>
                     )}
 
-                    {/* Items  */}
+               
                     {!done && step === 3 && (
                         <div className="space-y-4">
                             <p className="text-xs font-bold text-[#2A4A6A]">
                                 Select sizes for each delivery
                             </p>
 
-                            {/* Size toggle grid */}
+                    
                             <div className="grid grid-cols-3 gap-2">
                                 {bottleSizes.map((s) => (
                                     <button
@@ -559,7 +581,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                 ))}
                             </div>
 
-                            {/* Per-size config */}
+                            
                             {Object.keys(sizes).length > 0 && (
                                 <div className="space-y-2">
                                     {bottleSizes.filter(
@@ -580,7 +602,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                                     {s.bottle_size}
                                                 </span>
 
-                                                {/* Refill / New toggle */}
+                                                
                                                 <div className="flex flex-shrink-0 gap-1">
                                                     {(
                                                         [
@@ -609,7 +631,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                                     ))}
                                                 </div>
 
-                                                {/* Qty stepper */}
+                                                
                                                 <div className="ml-auto flex items-center gap-2">
                                                     <button
                                                         type="button"
@@ -644,7 +666,7 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                                     </button>
                                                 </div>
 
-                                                {/* Line total */}
+                                              
                                                 <span className="w-16 flex-shrink-0 text-right text-xs font-bold text-[#1A78C2]">
                                                     KES{" "}
                                                     {(
@@ -655,13 +677,13 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                         );
                                     })}
 
-                                    {/* Cycle total */}
+                                   
                                     <div className="flex items-center justify-between px-1 pt-2">
                                         <span className="text-xs text-[#8AA8C0]">
                                             Delivery fee per cycle
                                         </span>
                                         <span className="text-xs text-[#8AA8C0]">
-                                            KES 150
+                                            KES {deliveryFee}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between border-t border-[#D4E8F5] px-1 pt-2">
@@ -684,7 +706,6 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                         </div>
                     )}
 
-                    {/* Payment + summary  */}
                     {!done && step === 4 && (
                         <div className="space-y-4">
                             <div>
@@ -738,7 +759,6 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                                 ))}
                             </div>
 
-                            {/* Full summary before submit */}
                             <div className="space-y-2.5 rounded-2xl border border-[#D4E8F5] bg-[#F5F8FC] p-4 text-sm">
                                 <p className="mb-3 text-[10px] font-bold tracking-wider text-[#8AA8C0] uppercase">
                                     Subscription summary
@@ -840,7 +860,6 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
                     )}
                 </div>
 
-                {/*  Footer nav  */}
                 {!done && (
                     <div className="flex flex-shrink-0 gap-3 border-t border-[#D4E8F5] bg-white px-6 py-4">
                         <button
@@ -911,52 +930,51 @@ function SubscriptionModal({ onClose, bottleSizes }: { onClose: () => void, bott
     );
 }
 
-//  Main welcome page 
 export default function Welcome({
     prices,
+    fees,
 }: {
-    prices: {
-        bottle_size: string;
-        refill_price: number | string;
-        new_price: number | string;
-    }[];
+    prices: PriceProp[];
+    fees: Fees;
 }) {
+    const BOTTLE_SIZES: BottleSize[] = useMemo(
+        () =>
+            prices.map((price) => ({
+                bottle_size: price.bottle_size,
+                refill_price: Number(price.refill_price),
+                new_price: Number(price.new_price),
+            })),
+        [prices],
+    );
 
+    const wizardSizes: SizeOption[] = useMemo(
+        () =>
+            prices.map((p) => ({
+                id: p.bottle_size,
+                label: p.bottle_size,
+                refillPrice: Number(p.refill_price),
+                newPrice: Number(p.new_price),
+                hasBundle: Boolean(p.has_bundle),
+                bundleOptions: p.bundle_options ?? [],
+            })),
+        [prices],
+    );
 
+    const hasPrices = prices.length > 0;
 
-    const BOTTLE_SIZES: BottleSize[] = prices.map((price) => ({
-        bottle_size: price.bottle_size,
-        refill_price: Number(price.refill_price),
-        new_price: Number(price.new_price),
-    }));
     const [scrolled, setScrolled] = useState(false);
     const [orderOpen, setOrderOpen] = useState(false);
     const [subOpen, setSubOpen] = useState(false);
 
-    const page = usePage();
+    const openOrder = () => {
+        if (!hasPrices) {
+            toast.error("Prices aren't available yet. Please check back soon.");
 
-    const flash = (page.props as typeof page.props & {
-        flash?: {
-            success?: string;
-            error?: string;
-        };
-    }).flash;
-
-    useEffect(() => {
-        if (flash?.success) {
-            toast.success(flash.success, {
-                duration: 5000,
-                position: "top-right",
-            });
+            return;
         }
 
-        if (flash?.error) {
-            toast.error(flash.error, {
-                duration: 5000,
-                position: "top-right",
-            });
-        }
-    }, [flash?.success, flash?.error]);
+        setOrderOpen(true);
+    };
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 40);
@@ -967,7 +985,7 @@ export default function Welcome({
 
     return (
         <div className="min-h-screen bg-[#F5F3EE] font-sans">
-            {/* nav */}
+           
             <nav
                 className={`fixed top-0 right-0 left-0 z-50 transition-all duration-300 ${scrolled ? "bg-white/90 shadow-sm backdrop-blur-md" : "bg-transparent"}`}
             >
@@ -1027,7 +1045,6 @@ export default function Welcome({
                 </div>
             </nav>
 
-            {/* HERO */}
             <section className="relative flex min-h-screen items-center overflow-hidden">
                 <div className="pointer-events-none absolute inset-0">
                     <div className="absolute top-[-80px] right-[-120px] h-[600px] w-[600px] rounded-full bg-[#DDEEFF] opacity-60 blur-3xl" />
@@ -1052,7 +1069,7 @@ export default function Welcome({
                         </p>
                         <div className="flex flex-wrap gap-4">
                             <button
-                                onClick={() => setOrderOpen(true)}
+                                onClick={openOrder}
                                 className="inline-flex items-center gap-2 rounded-full bg-[#1A78C2] px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#1A4A7A]/20 transition-all hover:bg-[#1A4A7A]"
                             >
                                 Order Now
@@ -1079,7 +1096,6 @@ export default function Welcome({
                             </a>
                         </div>
 
-                        {/* Trust badges */}
                         <div className="mt-10 flex items-center gap-6 border-t border-[#D4E8F5] pt-10">
                             <div className="text-center">
                                 <div className="text-2xl font-bold text-[#0D2A47]">
@@ -1092,10 +1108,12 @@ export default function Welcome({
                             <div className="h-10 w-px bg-[#D4E8F5]" />
                             <div className="text-center">
                                 <div className="text-2xl font-bold text-[#0D2A47]">
-                                    6 sizes
+                                    {prices.length} sizes
                                 </div>
                                 <div className="mt-0.5 text-xs text-[#6A8AA8]">
-                                    500ml → 20L
+                                    {hasPrices
+                                        ? `${BOTTLE_SIZES[0].bottle_size} → ${BOTTLE_SIZES[BOTTLE_SIZES.length - 1].bottle_size}`
+                                        : "Coming soon"}
                                 </div>
                             </div>
                             <div className="h-10 w-px bg-[#D4E8F5]" />
@@ -1110,7 +1128,7 @@ export default function Welcome({
                         </div>
                     </div>
 
-                    {/* Right card */}
+                
                     <div className="relative flex justify-center">
                         <div className="relative w-72">
                             <div className="absolute top-4 left-4 h-full w-full rotate-3 rounded-3xl bg-[#C8E0F5]" />
@@ -1221,7 +1239,7 @@ export default function Welcome({
                 </div>
             </section>
 
-            {/* How it works*/}
+        
             <section id="how-it-works" className="bg-white py-24">
                 <div className="mx-auto max-w-5xl px-6">
                     <div className="mb-16 text-center">
@@ -1344,7 +1362,7 @@ export default function Welcome({
                 </div>
             </section>
 
-            {/* PRICING */}
+         
             <section id="pricing" className="bg-[#F5F3EE] py-24">
                 <div className="mx-auto max-w-5xl px-6">
                     <div className="mb-16 text-center">
@@ -1360,47 +1378,58 @@ export default function Welcome({
                         </p>
                     </div>
 
+                    {!hasPrices && (
+                        <p className="py-10 text-center text-[#6A8AA8]">
+                            Prices will be available soon.
+                        </p>
+                    )}
+
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                        {BOTTLE_SIZES.map((item) => (
-                            <div
-                                key={item.bottle_size}
-                                className={`relative rounded-2xl bg-white p-5 ${item.bottle_size === "20l"
-                                    ? "ring-2 ring-[#1A78C2]"
-                                    : ""
-                                    }`}
-                            >
-                                {item.bottle_size === "20l" && (
-                                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-[#1A78C2] px-3 py-0.5 text-xs font-semibold whitespace-nowrap text-white">
-                                        Most popular
-                                    </span>
-                                )}
+                        {BOTTLE_SIZES.map((item) => {
+                            const isPopular =
+                                item.bottle_size.toLowerCase() === "20l";
 
-                                <div className="mb-3 text-2xl font-black text-[#0D2A47]">
-                                    {item.bottle_size}
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-[#6A8AA8]">Refill</span>
-                                        <span className="font-semibold text-[#1A4A7A]">
-                                            KES {item.refill_price.toLocaleString()}
+                            return (
+                                <div
+                                    key={item.bottle_size}
+                                    className={`relative rounded-2xl bg-white p-5 ${isPopular
+                                        ? "ring-2 ring-[#1A78C2]"
+                                        : ""
+                                        }`}
+                                >
+                                    {isPopular && (
+                                        <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-[#1A78C2] px-3 py-0.5 text-xs font-semibold whitespace-nowrap text-white">
+                                            Most popular
                                         </span>
+                                    )}
+
+                                    <div className="mb-3 text-2xl font-black text-[#0D2A47]">
+                                        {item.bottle_size}
                                     </div>
 
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-[#6A8AA8]">Brand new</span>
-                                        <span className="font-semibold text-[#1A4A7A]">
-                                            KES {item.new_price.toLocaleString()}
-                                        </span>
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-[#6A8AA8]">Refill</span>
+                                            <span className="font-semibold text-[#1A4A7A]">
+                                                KES {item.refill_price.toLocaleString()}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-[#6A8AA8]">Brand new</span>
+                                            <span className="font-semibold text-[#1A4A7A]">
+                                                KES {item.new_price.toLocaleString()}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     <div className="mt-8 text-center">
                         <button
-                            onClick={() => setOrderOpen(true)}
+                            onClick={openOrder}
                             className="inline-flex items-center gap-2 rounded-full bg-[#1A4A7A] px-8 py-3.5 font-semibold text-white shadow-lg shadow-[#1A4A7A]/20 transition-all hover:bg-[#0D2A47]"
                         >
                             Start your order
@@ -1409,7 +1438,7 @@ export default function Welcome({
                 </div>
             </section>
 
-            {/* SUBSCRIPTIONS  */}
+         
             <section id="subscriptions" className="bg-[#0D2A47] py-24">
                 <div className="mx-auto max-w-5xl px-6">
                     <div className="grid items-center gap-12 md:grid-cols-2">
@@ -1459,7 +1488,7 @@ export default function Welcome({
                                     </li>
                                 ))}
                             </ul>
-                            {/* CTA — opens modal */}
+                         
                             <button
                                 onClick={() => setSubOpen(true)}
                                 className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 font-bold text-[#0D2A47] shadow-xl transition-all hover:bg-[#F5F3EE]"
@@ -1482,7 +1511,7 @@ export default function Welcome({
                             </button>
                         </div>
 
-                        {/* Frequency cards — now clickable */}
+                  
                         <div className="grid grid-cols-2 gap-4">
                             {FREQ_OPTIONS.map((s) => (
                                 <button
@@ -1507,7 +1536,7 @@ export default function Welcome({
                 </div>
             </section>
 
-            {/* CTA FOOTER */}
+          
             <section className="bg-white py-20 text-center">
                 <div className="mx-auto max-w-xl px-6">
                     <h2 className="mb-4 text-3xl font-extrabold text-[#0D2A47]">
@@ -1518,7 +1547,7 @@ export default function Welcome({
                         to Bhebha.
                     </p>
                     <button
-                        onClick={() => setOrderOpen(true)}
+                        onClick={openOrder}
                         className="inline-flex items-center gap-2 rounded-full bg-[#1A4A7A] px-10 py-4 text-lg font-semibold text-white shadow-xl shadow-[#1A4A7A]/20 transition-all hover:bg-[#0D2A47]"
                     >
                         Order Now — it's fast
@@ -1540,7 +1569,7 @@ export default function Welcome({
                 </div>
             </section>
 
-            {/* FOOTER */}
+      
             <footer className="border-t border-[#D4E8F5] bg-[#F5F3EE] py-10">
                 <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
                     <div className="flex items-center gap-2">
@@ -1576,9 +1605,21 @@ export default function Welcome({
                 </div>
             </footer>
 
-            {/* Modals */}
-            {orderOpen && <Wizard onClose={() => setOrderOpen(false)} />}
-            {subOpen && <SubscriptionModal onClose={() => setSubOpen(false)} bottleSizes={BOTTLE_SIZES} />}
+       
+            {orderOpen && (
+                <Wizard
+                    sizes={wizardSizes}
+                    fees={fees}
+                    onClose={() => setOrderOpen(false)}
+                />
+            )}
+            {subOpen && (
+                <SubscriptionModal
+                    onClose={() => setSubOpen(false)}
+                    bottleSizes={BOTTLE_SIZES}
+                    deliveryFee={fees.deliveryFee}
+                />
+            )}
         </div>
     );
 }

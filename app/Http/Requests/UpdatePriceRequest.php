@@ -12,7 +12,7 @@ class UpdatePriceRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +23,8 @@ class UpdatePriceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'refill_price' => ['required','integer','min:0'],
+            'new_price' => ['required','integer','min:0']
         ];
     }
 }

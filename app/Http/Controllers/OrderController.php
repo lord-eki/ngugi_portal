@@ -20,12 +20,7 @@ use Inertia\Inertia;
 class OrderController extends Controller
 {
 
-    public function store(Request $request, CreateOrderAction $createOrderAction)
-
-    {
-        Log::info($request);
-        return $createOrderAction->handle($request->all());
-    }
+   
 
     public function updateOrderStatus(Order $order, Request $request, UpdateOrderStatus $action): RedirectResponse
     {
@@ -43,10 +38,7 @@ class OrderController extends Controller
         return $action->handle($order);
     }
 
-    public function paymentStatus(Order $order, PaymentStatusAction $action)
-    {
-        return $action->handle($order);
-    }
+    
 
     public function assignRider(Order $order, Request $request, AssignRiderAction $action): RedirectResponse
     {
@@ -60,12 +52,20 @@ class OrderController extends Controller
         abort_unless(Auth::user()->isAdmin(), 403);
 
         $order->loadMissing('delivery');
-        abort_if(! $order->delivery?->delivery_code, 422, 'No delivery code has been generated for this order yet.');
+        if (! $order->delivery?->delivery_code) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'No delivery code has been generated yet.']);
+            return back();
+        }
 
-        $email = $order->delivery->recepient_email ?? $order->delivery->contact_email;
-        abort_if(! $email, 422, 'No email on file for this order — share the code manually.');
+        $email = $order->delivery->recepient_email ?: $order->delivery->contact_email;
+       
+        if (! $email) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'No email on file for this order. Share the code manually.']);
+            return back();
+        }
 
         Mail::to($email)->queue(new DeliveryCodeMail($order, $order->delivery->delivery_code));
+
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Delivery code re-sent.']);
         return back();

@@ -24,8 +24,8 @@ class StorePriceRequest extends FormRequest
     {
         return [
             'bottle_size' => ['required' , 'string','unique:prices,bottle_size'],
-            'refill_price' => ['required','integer'],
-            'new_price' => ['required','integer']
+            'refill_price' => ['required','integer','min:0'],
+            'new_price' => ['required','integer','min:0']
 
         ];
     }

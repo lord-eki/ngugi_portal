@@ -4,6 +4,7 @@ use App\Actions\Orders\AssignRefillerAction;
 use App\Http\Controllers\Admin\PriceController;
 use App\Http\Controllers\Admin\RefillerController;
 use App\Http\Controllers\Admin\RiderController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\SubscriptionController;
@@ -19,24 +20,25 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    $prices = Price::get();
-    
-    return Inertia::render('welcome',['prices' => $prices]);
+    $prices = Price::where('is_active', true)->orderBy('sort_order')->get();
 
+    return Inertia::render(
+        'welcome',
+        [
+            'prices' => $prices,
+            'fees' => ['deliveryFee' => config('pricing.delivery_fee'),'instantFee' => config('pricing.instant_fee')]
+        ]
+    );
 })->name('home');
 
-Route::resource('orders', OrderController::class);
-
-Route::get('/orders/{order}/payment-status', [OrderController::class, 'paymentStatus'])
-    ->name('orders.payment-status');
-
-Route::post('/mpesa/register-urls', [MpesaController::class, 'registerUrls']);
-Route::post('/mpesa/stk', [MpesaController::class, 'stkPush']);
 Route::post('/mpesa/validate', [MpesaController::class, 'validateURL']);
 Route::post('/mpesa/stk/callback', [MpesaController::class, 'stkCallback']);
 
 Route::post('/mpesa/b2c/result', [MpesaController::class, 'b2cResult']);
 Route::post('/mpesa/b2c/timeout', [MpesaController::class, 'b2cTimeout']);
+
+Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
+Route::get('/checkout/{checkout}/status', [CheckoutController::class, 'status'])->middleware('throttle:120,1')->name('checkout.status');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
@@ -71,7 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/riders/{rider}/reset-password', [RiderController::class, 'resetPassword'])->name('riders.reset-password');
         Route::get('/riders/{rider}/password', [RiderController::class, 'revealPassword'])->name('riders.reveal-password');
 
-        Route::get('/prices',[PriceController::class, 'index'])->name('prices.index');
+        Route::get('/prices', [PriceController::class, 'index'])->name('prices.index');
         Route::post('/prices', [PriceController::class, 'store'])->name('prices.store');
         Route::patch('/prices/{price}', [PriceController::class, 'update'])->name('prices.update');
 
@@ -82,13 +84,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $data = $request->validate(['refiller_id' => ['nullable', 'exists:refillers,id']]);
             return $action->handle($order, $data['refiller_id'] ?? null);
         })->name('orders.assign-refiller');
-        Route::post('/orders/{order}/assign-rider', [OrderController::class, 'assignRider'])
-            ->name('orders.assign-rider');
+        Route::post('/orders/{order}/assign-rider', [OrderController::class, 'assignRider'])->name('orders.assign-rider');
         Route::patch('/refillers/{refiller}', [RefillerController::class, 'update'])->name('refillers.update');
-
-        Route::post('/orders/{order}/resend-delivery-code', [OrderController::class, 'resendDeliveryCode'])
-            ->middleware('role:admin')
-            ->name('orders.resend-delivery-code');
+        Route::post('/orders/{order}/resend-delivery-code', [OrderController::class, 'resendDeliveryCode'])->name('orders.resend-delivery-code');
     });
 
     Route::middleware('role:rider')->prefix('rider')->name('rider.')->group(function () {

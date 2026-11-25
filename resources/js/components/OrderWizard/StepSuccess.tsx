@@ -1,6 +1,7 @@
 import type { OrderData, DeliveryData, PaymentData } from "./Wizard";
 
 interface Props {
+    orderId:number;
     orderData: OrderData;
     deliveryData: DeliveryData;
     paymentData: PaymentData;
@@ -8,84 +9,29 @@ interface Props {
 }
 
 const METHOD_LABELS: Record<string, string> = {
-    // 'mpesa-stk':  'M-Pesa STK Push',
+    'mpesa-stk':  'M-Pesa STK Push',
     "mpesa-till": "M-Pesa Till",
-    // 'card':       'Card payment',
 };
 
-const ORDER_NUM = `BH${Date.now().toString().slice(-6)}`;
 
 export default function StepSuccess({
+    orderId,
     orderData,
     deliveryData,
     paymentData,
     onClose,
 }: Props) {
+
+    const orderNum = `\BH${String(orderId).padStart(6, "0")}`;
     const isTill = paymentData.method === "mpesa-till";
 
     return (
         <div className="space-y-5">
-            {/* ── Status banner ── */}
-            <div
-                className={`flex items-start gap-4 rounded-2xl p-5 ${isTill ? "border border-[#F5D78A] bg-[#FFF8E8]" : "border border-[#9AD49A] bg-[#E8F5E8]"}`}
-            >
-                <div
-                    className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${isTill ? "bg-[#F5D78A]" : "bg-[#3A7A3A]"}`}
-                >
-                    {isTill ? (
-                        <svg
-                            width="22"
-                            height="22"
-                            viewBox="0 0 22 22"
-                            fill="none"
-                        >
-                            <path
-                                d="M11 7v4M11 15h.01"
-                                stroke="#7A5A10"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                            />
-                        </svg>
-                    ) : (
-                        <svg
-                            width="22"
-                            height="22"
-                            viewBox="0 0 22 22"
-                            fill="none"
-                        >
-                            <path
-                                d="M5 11l5 5L17 7"
-                                stroke="white"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    )}
-                </div>
-                <div>
-                    <h2
-                        className={`text-base font-bold ${isTill ? "text-[#7A5A10]" : "text-[#2A5A2A]"}`}
-                    >
-                        {isTill
-                            ? "Order pending verification"
-                            : "Order confirmed!"}
-                    </h2>
-                    <p
-                        className={`mt-1 text-xs leading-relaxed ${isTill ? "text-[#9A7A30]" : "text-[#3A6A3A]"}`}
-                    >
-                        {isTill
-                            ? "Your order has been received. Our team will verify your till payment and confirm your order shortly."
-                            : "Payment received. Your water order is confirmed and being processed."}
-                    </p>
-                </div>
-            </div>
 
-            {/* ── Order number ── */}
             <div className="rounded-2xl border border-[#D4E8F5] bg-white p-5 text-center">
                 <p className="mb-1 text-xs text-[#8AA8C0]">Order number</p>
                 <p className="text-2xl font-black tracking-widest text-[#1A4A7A]">
-                    {ORDER_NUM}
+                    {orderNum}
                 </p>
                 <p className="mt-1 text-xs text-[#8AA8C0]">
                     Save this for reference
@@ -158,14 +104,12 @@ export default function StepSuccess({
                                 : deliveryData.scheduledTime}
                         </span>
                     </div>
-                    {/* Payment method */}
                     <div className="flex justify-between">
                         <span className="text-[#8AA8C0]">Paid via</span>
                         <span className="font-medium text-[#0D2A47]">
                             {METHOD_LABELS[paymentData.method]}
                         </span>
                     </div>
-                    {/* Transaction code for till */}
                     {isTill && paymentData.transactionCode && (
                         <div className="flex justify-between">
                             <span className="text-[#8AA8C0]">Transaction</span>

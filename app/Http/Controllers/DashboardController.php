@@ -29,7 +29,7 @@ class DashboardController extends Controller
             'totalSpent'     => Order::whereIn('status', ['confirmed', 'out_for_delivery', 'delivered'])
                 ->sum('grand_total'),
             'totalRiderPayouts' => RiderEarning::sum('amount'),
-            'netRevenue'        => Order::whereIn('status', ['confirmed', 'out_for_delivery', 'delivered'])->sum('grand_total')
+            'netRevenue'        => Order::whereIn('status', ['delivered'])->sum('grand_total')
                 - RiderEarning::sum('amount'),
             'activeOrders'   => Order::whereIn('status', ['pending', 'confirmed', 'out_for_delivery'])
                 ->count(),
@@ -39,7 +39,7 @@ class DashboardController extends Controller
 
         $orders = Order::with(['orderItems', 'charges', 'delivery.rider', 'payment', 'refiller'])
             ->latest()
-            ->paginate(10)
+            ->paginate(5)
             ->through(fn(Order $order) => [
                 'id'             => $order->id,
                 'delivery_speed' => $order->delivery_speed,

@@ -22,9 +22,11 @@ class RequestWithdrawalAction
                 ->orderBy('created_at')
                 ->get();
 
+
             if ($available->sum('amount') < $amount) {
                 throw new RuntimeException('Insufficient available balance.');
             }
+
 
             $withdrawal = Withdrawal::create([
                 'rider_id' => $rider->id,
@@ -36,8 +38,9 @@ class RequestWithdrawalAction
             AuditLogger::log('withdrawal.requested', $withdrawal, ['amount' => $amount]);
 
 
-            // Reserve earnings covering the amount, FIFO
+   
             $remaining = $amount;
+
             foreach ($available as $earning) {
                 if ($remaining <= 0) break;
                 $earning->update(['status' => 'reserved', 'withdrawal_id' => $withdrawal->id]);

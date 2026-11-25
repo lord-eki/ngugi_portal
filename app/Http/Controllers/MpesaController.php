@@ -10,7 +10,7 @@ use App\Services\MpesaService;
 
 class MpesaController extends Controller
 {
-    public $mpesaService;
+    public MpesaService $mpesaService;
 
     public  function  __construct(MpesaService $mpesaService)
     {
@@ -28,19 +28,7 @@ class MpesaController extends Controller
         return $this->mpesaService->registerUrls();
     }
 
-    public function stkPush(Request $request)
-    {
-        $validated = $request->validate([
-            'payment_id' => ['required', 'exists:payments,id'],
-            'phone'      => ['required', 'regex:/^2547\d{8}$/'], 
-        ]);
-
-        $payment = Payment::findOrFail($validated['payment_id']);
-
-        $data = $this->mpesaService->stkPush($payment, $validated['phone'], $payment->order->grand_total);
-
-        return response()->json(['checkout_request_id' => $data['CheckoutRequestID'] ?? null]);
-    }
+  
 
     public function stkCallback(Request $request)
     {

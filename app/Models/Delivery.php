@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use BaconQrCode\Renderer\RendererStyle\Fill;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,21 +12,14 @@ class Delivery extends Model
     use HasFactory;
     
     protected $fillable = [
-        'order_id',
-        'rider_id',
-        'location_mode',
-        'manual_address',
-        'delivery_code',
+        'order_id','rider_id',
+        'location_mode','manual_address',
+        'delivery_code','recepient_email','contact_email',
         'delivery_code_verified_at',
-        'pin_address',
-        'recepient_name',
-        'recepient_phone',
-        'schedule_type',
-        'scheduled_time',
-        'notes',
-        'contact_phone',
-        'contact_name',
-        'assigned_at'
+        'pin_address','pin_lat','pin_lng',
+        'recepient_name','recepient_phone','schedule_type',
+        'scheduled_time','notes','contact_phone',
+        'contact_name','assigned_at'
     ];
 
 
@@ -42,7 +36,7 @@ class Delivery extends Model
 
     public function getAddressAttribute(): string
     {
-        return $this->pin_address ?? $this->manual_address ?? '—';
+        return filled($this->pin_address) ? $this->pin_address : (filled($this->manual_address) ? $this->manual_address : '--');
     }
 
     public function getScheduleLabelAttribute(): string

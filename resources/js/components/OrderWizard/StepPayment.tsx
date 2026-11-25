@@ -1,92 +1,133 @@
 import axios from "axios";
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { OrderData, DeliveryData, PaymentData } from "./Wizard";
-
-type PaymentMethod = "mpesa-stk" | "mpesa-till" | "card";
 
 interface Props {
     orderData: OrderData;
     deliveryData: DeliveryData;
-    onNext: (data: PaymentData) => void;
+    onNext: (data: PaymentData, orderId: number) => void;
     onBack: () => void;
 }
 
-function SectionCard({
-    children,
-    className = "",
-}: {
-    children: React.ReactNode;
-    className?: string;
-}) {
+const POLL_EVERY_MS = 3000;
+const GIVE_UP_AFTER_MS = 120_000;
+
+function toMsisdn(raw: string): string | null {
+    let d = raw.replace(/\D/g, "");
+
+    if (d.startsWith("0")) {
+        d = "254" + d.slice(1);
+    } else if (/^[17]\d{8}$/.test(d)) {
+        d = "254" + d;
+    }
+
+    return /^254[17]\d{8}$/.test(d) ? d : null;
+}
+
+const newKey = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
     return (
-        <div
-            className={`rounded-2xl border border-[#D4E8F5] bg-white p-5 ${className}`}
-        >
-            {children}
-        </div>
+        <div className={`rounded-2xl border border-[#D4E8F5] bg-white p-5 ${className}`}>{children}</div>
     );
 }
 
-const TILL_NUMBER = "123456";
-
-export default function StepPayment({
-    orderData,
-    deliveryData,
-    onNext,
-    onBack,
-}: Props) {
-    const [method, setMethod] = useState<PaymentMethod>("mpesa-till");
+export default function StepPayment({ orderData, deliveryData, onNext, onBack }: Props) {
     const [phone, setPhone] = useState("");
-    const [cardNumber, setCardNumber] = useState("");
-    const [cardExpiry, setCardExpiry] = useState("");
-    const [cardCvv, setCardCvv] = useState("");
-    const [stkStatus, setStkStatus] = useState<
-        "idle" | "waiting" | "success" | "failed"
-    >("idle");
+    const [stkStatus, setStkStatus] = useState<"idle" | "waiting" | "success" | "failed">("idle");
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
     const submittingRef = useRef(false);
+    const idempotencyKey = useRef(newKey());
+    const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const mounted = useRef(true);
+
+    useEffect(() => {
+        mounted.current = true;
+
+        return () => {
+            mounted.current = false;
+
+            if (pollTimer.current) {
+                clearTimeout(pollTimer.current);
+            }
+        };
+    }, []);
 
     const total = orderData.grandTotal;
+    const msisdn = toMsisdn(phone);
 
-    const buildPayload = (paymentData: PaymentData) => ({
-        // Order details
-        order: {
-            selectedTypes: orderData.selectedTypes,
-            refillSizes: orderData.refillSizes,
-            newSizes: orderData.newSizes,
-            deliverySpeed: orderData.deliverySpeed,
-            lineItems: orderData.lineItems,
-            grandTotal: orderData.grandTotal,
-        },
-        // Delivery details
-        delivery: {
-            locationMode: deliveryData.locationMode,
-            pinLocation: deliveryData.pinLocation,
-            pinAddress: deliveryData.pinAddress,
-            manualAddress: deliveryData.manualAddress,
-            contactName: deliveryData.contactName,
-            contactPhone: deliveryData.contactPhone,
-            contactEmail: deliveryData.contactEmail,
-            recipientName: deliveryData.recipientName,
-            recipientPhone: deliveryData.recipientPhone,
-            recipientEmail: deliveryData.recipientEmail,
-            scheduleType: deliveryData.scheduleType,
-            scheduledTime: deliveryData.scheduledTime,
-            notes: deliveryData.notes,
-        },
-        // Payment details
-        payment: paymentData,
-    });
+    const fail = (message: string) => {
+        if (!mounted.current) {
+            return;
+        }
 
-    const handleStkPush = async () => {
+        idempotencyKey.current = newKey(); 
+        submittingRef.current = false;
+        setSubmitting(false);
+        setStkStatus("failed");
+        setError(message);
+        toast.error(message);
+    };
+
+    const poll = (publicId: string, startedAt: number) => {
+        pollTimer.current = setTimeout(async () => {
+            if (!mounted.current) {
+                return;
+            }
+
+            try {
+                const { data } = await axios.get(`/checkout/${publicId}/status`);
+
+                if (!mounted.current) {
+                    return;
+                }
+
+                if (data.status === "paid") {
+                    submittingRef.current = false;
+                    setSubmitting(false);
+                    setStkStatus("success");
+                    toast.success("Payment received. Your order is confirmed!");
+                    setTimeout(
+                        () => mounted.current && onNext({ method: "mpesa-stk", phone: msisdn ?? phone }, data.order_id),
+                        800,
+                    );
+
+                    return;
+                }
+
+                if (data.status === "failed" || data.status === "expired") {
+                    fail(data.message || "The payment was not completed.");
+
+                    return;
+                }
+            } catch {
+            }
+
+            if (Date.now() - startedAt > GIVE_UP_AFTER_MS) {
+                fail("We haven't received a confirmation yet. If M-Pesa deducted money, contact us with your M-Pesa message.");
+
+                return;
+            }
+
+            poll(publicId, startedAt);
+        }, POLL_EVERY_MS);
+    };
+
+    const handlePay = async () => {
         if (submittingRef.current) {
             return;
         }
 
-        if (!phone || phone.length < 9) {
-            setError("Enter a valid phone number");
+        if (!msisdn) {
+            const msg = "Enter a valid Safaricom number, e.g. 0712 345 678";
+            setError(msg);
+            toast.error(msg);
 
             return;
         }
@@ -97,134 +138,41 @@ export default function StepPayment({
         setStkStatus("waiting");
 
         try {
-            const paymentData: PaymentData = {
-                method,
-                phone,
-                tillCode: method === "mpesa-till" ? TILL_NUMBER : "",
-                transactionCode: "",
-                cardNumber: "",
-                cardExpiry: "",
-                cardCvv: "",
-            };
+            const { data } = await axios.post("/checkout", {
+                idempotency_key: idempotencyKey.current,
+                phone: msisdn,
+                order: {
+                    refillSizes: orderData.refillSizes,
+                    newSizes: orderData.newSizes,
+                    deliverySpeed: orderData.deliverySpeed,
+                },
+                delivery: {
+                    locationMode: deliveryData.locationMode,
+                    pinLocation: deliveryData.pinLocation,
+                    pinAddress: deliveryData.pinAddress,
+                    manualAddress: deliveryData.manualAddress,
+                    contactName: deliveryData.contactName,
+                    contactPhone: deliveryData.contactPhone,
+                    contactEmail: deliveryData.contactEmail,
+                    recipientName: deliveryData.recipientName,
+                    recipientPhone: deliveryData.recipientPhone,
+                    recipientEmail: deliveryData.recipientEmail,
+                    scheduleType: deliveryData.scheduleType,
+                    scheduledTime: deliveryData.scheduledTime,
+                    notes: deliveryData.notes,
+                },
+            });
 
-            const response = await axios.post(
-                "/orders",
-                buildPayload(paymentData),
-            );
-            const orderId = response.data.order_id;
-
-            if (!orderId) {
-                throw new Error("Order ID was not returned by the server");
-            }
-
-            setStkStatus("waiting");
-
-            const checkPaymentStatus = async () => {
-                try {
-                    const statusResponse = await axios.get(
-                        `/orders/${orderId}/payment-status`,
-                    );
-                    const status = statusResponse.data.status;
-
-                    if (status === "paid") {
-                        setStkStatus("success");
-                        setSubmitting(false);
-                        submittingRef.current = false;
-
-                        setTimeout(() => {
-                            onNext(paymentData);
-                        }, 1000);
-
-                        return;
-                    }
-
-                    if (status === "failed") {
-                        setStkStatus("failed");
-                        setSubmitting(false);
-                        submittingRef.current = false;
-                        setError(
-                            statusResponse.data.message ||
-                                "Mpesa payment failed. Please try again",
-                        );
-
-                        return;
-                    }
-
-                    setTimeout(checkPaymentStatus, 3000);
-                } catch (error) {
-                    console.error("Payment status check failed:", error);
-                    setStkStatus("failed");
-                    setSubmitting(false);
-                    submittingRef.current = false;
-                    setError(
-                        "Unable to check payment status. Please try again",
-                    );
-                }
-            };
-
-            setTimeout(checkPaymentStatus, 3000);
+            toast.info("Check your phone and enter your M-Pesa PIN.");
+            poll(data.public_id, Date.now());
         } catch (e: any) {
-            setStkStatus("failed");
-            setSubmitting(false);
-            submittingRef.current = false;
-            setError(
-                e?.response?.data?.message ||
-                    e?.message ||
-                    "Unable to initiate Mpesa payment.",
-            );
+            const firstValidation = e?.response?.data?.errors
+                ? (Object.values(e.response.data.errors)[0] as string[])[0]
+                : null;
+
+            fail(firstValidation || e?.response?.data?.message || "Could not start the payment. Please try again.");
         }
     };
-
-    // ── Card payment flow
-    const handleCardSubmit = async () => {
-        if (submittingRef.current) {
-            return;
-        }
-
-        if (!cardNumber || !cardExpiry || !cardCvv) {
-            setError("Fill in all card details");
-
-            return;
-        }
-
-        submittingRef.current = true;
-        setError("");
-        setSubmitting(true);
-
-        try {
-            const paymentData: PaymentData = {
-                method: "card",
-                phone: "",
-                tillCode: "",
-                transactionCode: "",
-                cardNumber,
-                cardExpiry,
-                cardCvv,
-            };
-            await axios.post("/orders", buildPayload(paymentData));
-            onNext(paymentData);
-        } catch (e: any) {
-            setError(
-                e?.response?.data?.message ||
-                    "Card payment failed. Please try again.",
-            );
-        } finally {
-            setSubmitting(false);
-            submittingRef.current = false;
-        }
-    };
-
-    const formatCard = (v: string) =>
-        v
-            .replace(/\D/g, "")
-            .replace(/(.{4})/g, "$1 ")
-            .trim()
-            .slice(0, 19);
-    const formatExpiry = (v: string) =>
-        v
-            .replace(/\D/g, "")
-            .replace(/^(\d{2})(\d)/, "$1/$2")
-            .slice(0, 5);
 
     return (
         <div className="space-y-5">
@@ -275,95 +223,11 @@ export default function StepPayment({
                 </div>
             </div>
 
-            {/* Payment method selector */}
-            <SectionCard>
-                <h2 className="mb-1 font-bold text-[#0D2A47]">
-                    Payment method
-                </h2>
-                <p className="mb-4 text-xs text-[#8AA8C0]">
-                    Choose how you'd like to pay
-                </p>
 
-                <div className="space-y-2">
-                    {(
-                        [
-                            { id: 'mpesa-stk' as const, label: 'M-Pesa STK Push', sub: 'You\'ll get a prompt on your phone', badge: 'Recommended' },
-                            // {
-                            //     id: "mpesa-till" as const,
-                            //     label: "M-Pesa Till Number",
-                            //     sub: "We'll send a prompt to your phone",
-                            //     badge: null,
-                            // },
-                            // { id: 'card' as const, label: 'Visa / Mastercard', sub: 'Secure card payment via Flutterwave', badge: null },
-                        ] as const
-                    ).map((opt) => {
-                        const active = method === opt.id;
-
-                        return (
-                            <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => {
-                                    setMethod(opt.id);
-                                    setError("");
-                                    setStkStatus("idle");
-                                }}
-                                className={`flex w-full items-start justify-between rounded-xl border-2 px-4 py-3.5 text-left transition-all ${
-                                    active
-                                        ? "border-[#1A4A7A] bg-[#EEF6FF]"
-                                        : "border-[#D4E8F5] bg-[#F9FBFD] hover:border-[#9ECBE8]"
-                                }`}
-                            >
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span
-                                            className={`text-sm font-semibold ${active ? "text-[#1A4A7A]" : "text-[#0D2A47]"}`}
-                                        >
-                                            {opt.label}
-                                        </span>
-                                        {opt.badge && (
-                                            <span className="rounded-full bg-[#1A78C2] px-2 py-0.5 text-[10px] font-semibold text-white">
-                                                {opt.badge}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="mt-0.5 text-xs text-[#6A8AA8]">
-                                        {opt.sub}
-                                    </div>
-                                </div>
-                                <div
-                                    className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${active ? "border-[#1A4A7A] bg-[#1A4A7A]" : "border-[#C4DDEF] bg-white"}`}
-                                >
-                                    {active && (
-                                        <svg
-                                            width="8"
-                                            height="8"
-                                            viewBox="0 0 8 8"
-                                            fill="none"
-                                        >
-                                            <path
-                                                d="M1.5 4l1.8 1.8L6.5 2.5"
-                                                stroke="white"
-                                                strokeWidth="1.5"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                        </svg>
-                                    )}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </SectionCard>
-
-            {/* ── M-Pesa (STK push) — covers both 'mpesa-stk' and 'mpesa-till' ── */}
-            {(method === "mpesa-stk" || method === "mpesa-till") && (
+          
                 <SectionCard>
                     <h3 className="mb-1 font-bold text-[#0D2A47]">
-                        {method === "mpesa-till"
-                            ? `Pay via M-Pesa Till ${TILL_NUMBER}`
-                            : "Enter your M-Pesa number"}
+                       Pay With Mpesa
                     </h3>
                     <p className="mb-4 text-xs text-[#8AA8C0]">
                         We'll send a payment prompt straight to your phone —
@@ -371,7 +235,7 @@ export default function StepPayment({
                     </p>
                     <div className="mb-4 flex gap-2">
                         <div className="flex flex-shrink-0 items-center rounded-xl border border-[#C4DDEF] bg-[#F5F8FC] px-3 text-xs font-medium text-[#4A6A8A]">
-                            🇰🇪 +254
+                             +254
                         </div>
                         <input
                             type="tel"
@@ -380,7 +244,7 @@ export default function StepPayment({
                                 setPhone(
                                     e.target.value
                                         .replace(/\D/g, "")
-                                        .slice(0, 10),
+                                        .slice(0, 12),
                                 )
                             }
                             placeholder="07XX XXX XXX"
@@ -457,8 +321,8 @@ export default function StepPayment({
                     {stkStatus === "idle" || stkStatus === "failed" ? (
                         <button
                             type="button"
-                            onClick={handleStkPush}
-                            disabled={submitting || phone.length < 9}
+                            onClick={handlePay}
+                            disabled={submitting || !msisdn}
                             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1A4A7A] py-3.5 font-semibold text-white shadow-lg shadow-[#1A4A7A]/20 transition-all hover:bg-[#0D2A47] disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             {submitting ? (
@@ -482,151 +346,17 @@ export default function StepPayment({
                                     />
                                 </svg>
                             ) : null}
-                            Pay KES {total.toLocaleString()}{" "}
-                            {method === "mpesa-till"
-                                ? "via Till"
-                                : "via M-Pesa"}
+                            Pay KES {total.toLocaleString()} via M-Pesa
+                            
                         </button>
                     ) : null}
                 </SectionCard>
-            )}
-
-            {/* ── Card ── */}
-            {method === "card" && (
-                <SectionCard>
-                    <h3 className="mb-1 font-bold text-[#0D2A47]">
-                        Card details
-                    </h3>
-                    <p className="mb-4 text-xs text-[#8AA8C0]">
-                        Processed securely via Flutterwave. We never store your
-                        card.
-                    </p>
-                    <div className="space-y-4">
-                        <div>
-                            <label className="mb-1.5 block text-sm font-semibold text-[#2A4A6A]">
-                                Card number
-                            </label>
-                            <input
-                                value={cardNumber}
-                                onChange={(e) =>
-                                    setCardNumber(formatCard(e.target.value))
-                                }
-                                placeholder="1234 5678 9012 3456"
-                                maxLength={19}
-                                className="w-full rounded-xl border border-[#C4DDEF] bg-white px-4 py-3 font-mono text-sm tracking-widest text-[#0D2A47] placeholder:text-[#A8C0D4] focus:ring-2 focus:ring-[#1A78C2] focus:outline-none"
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="mb-1.5 block text-sm font-semibold text-[#2A4A6A]">
-                                    Expiry
-                                </label>
-                                <input
-                                    value={cardExpiry}
-                                    onChange={(e) =>
-                                        setCardExpiry(
-                                            formatExpiry(e.target.value),
-                                        )
-                                    }
-                                    placeholder="MM/YY"
-                                    maxLength={5}
-                                    className="w-full rounded-xl border border-[#C4DDEF] bg-white px-4 py-3 font-mono text-sm text-[#0D2A47] placeholder:text-[#A8C0D4] focus:ring-2 focus:ring-[#1A78C2] focus:outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1.5 block text-sm font-semibold text-[#2A4A6A]">
-                                    CVV
-                                </label>
-                                <input
-                                    value={cardCvv}
-                                    onChange={(e) =>
-                                        setCardCvv(
-                                            e.target.value
-                                                .replace(/\D/g, "")
-                                                .slice(0, 4),
-                                        )
-                                    }
-                                    placeholder="•••"
-                                    maxLength={4}
-                                    type="password"
-                                    className="w-full rounded-xl border border-[#C4DDEF] bg-white px-4 py-3 font-mono text-sm text-[#0D2A47] placeholder:text-[#A8C0D4] focus:ring-2 focus:ring-[#1A78C2] focus:outline-none"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-[#8AA8C0]">
-                            <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                            >
-                                <rect
-                                    x="2"
-                                    y="7"
-                                    width="12"
-                                    height="8"
-                                    rx="1.5"
-                                    stroke="currentColor"
-                                    strokeWidth="1.4"
-                                />
-                                <path
-                                    d="M5 7V5a3 3 0 016 0v2"
-                                    stroke="currentColor"
-                                    strokeWidth="1.4"
-                                    strokeLinecap="round"
-                                />
-                            </svg>
-                            Secured by Flutterwave. Your card details are never
-                            stored.
-                        </div>
-                        <button
-                            type="button"
-                            onClick={handleCardSubmit}
-                            disabled={
-                                submitting ||
-                                !cardNumber ||
-                                !cardExpiry ||
-                                !cardCvv
-                            }
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1A4A7A] py-3.5 font-semibold text-white shadow-lg shadow-[#1A4A7A]/20 transition-all hover:bg-[#0D2A47] disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                            {submitting && (
-                                <svg
-                                    className="h-4 w-4 animate-spin"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                >
-                                    <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                    />
-                                    <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"
-                                    />
-                                </svg>
-                            )}
-                            Pay KES {total.toLocaleString()}
-                        </button>
-                    </div>
-                </SectionCard>
-            )}
-
-            {/* Global error */}
-            {error && method === "card" && (
-                <div className="rounded-xl border border-[#F5AAAA] bg-[#FEF0F0] px-4 py-3 text-sm text-red-600">
-                    {error}
-                </div>
-            )}
+            
 
             {/* Back */}
             <button
                 type="button"
+                disabled={submitting}
                 onClick={onBack}
                 className="w-full rounded-xl border-2 border-[#D4E8F5] py-3 font-semibold text-[#1A4A7A] transition-all hover:bg-[#EEF6FF]"
             >

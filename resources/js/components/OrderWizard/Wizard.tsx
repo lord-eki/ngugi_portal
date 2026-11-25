@@ -46,24 +46,38 @@ export interface DeliveryData {
 }
 
 export interface PaymentData {
-    method: "mpesa-stk" | "mpesa-till" | "card";
+    method: "mpesa-stk";
     phone: string;
-    tillCode: string;
-    transactionCode: string;
-    cardNumber: string;
-    cardExpiry: string;
-    cardCvv: string;
+
+}
+
+
+export interface SizeOption {
+    id: string;
+    label: string;
+    refillPrice: number;
+    newPrice: number;
+    hasBundle: boolean;
+    bundleOptions: number[];
+}
+
+export interface Fees {
+    deliveryFee: number;
+    instantFee: number;
 }
 
 interface Props {
+    sizes: SizeOption[];
+    fees: Fees;
     onClose: () => void;
 }
 
-// Progress bar steps
+
 const STEPS = ["Order", "Delivery", "Payment", "Done"];
 
-export default function Wizard({ onClose }: Props) {
+export default function Wizard({ sizes, fees, onClose }: Props) {
     const [step, setStep] = useState(1);
+    const [orderId, setOrderId] = useState<number | null>(null);
 
     const [orderData, setOrderData] = useState<OrderData | null>(null);
     const [deliveryData, setDeliveryData] = useState<DeliveryData | null>(null);
@@ -80,9 +94,9 @@ export default function Wizard({ onClose }: Props) {
         setStep(3);
     };
 
-    const handlePaymentNext = (data: PaymentData) => {
+    const handlePaymentNext = (data: PaymentData, newOrderId: number) => {
         setPaymentData(data);
-
+        setOrderId(newOrderId);
         setStep(4);
     };
 
@@ -91,9 +105,9 @@ export default function Wizard({ onClose }: Props) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="relative flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[#F5F3EE] shadow-2xl">
-                {/* ── Header ── */}
+
                 <div className="flex-shrink-0 border-b border-[#D4E8F5] bg-white px-6 pt-5 pb-4">
-                    {/* Logo + close */}
+
                     <div className="mb-4 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1A4A7A]">
@@ -133,7 +147,7 @@ export default function Wizard({ onClose }: Props) {
                         </button>
                     </div>
 
-                    {/* Step progress */}
+
                     <div className="flex items-center gap-0">
                         {STEPS.map((label, i) => {
                             const stepNum = i + 1;
@@ -148,13 +162,12 @@ export default function Wizard({ onClose }: Props) {
                                 >
                                     <div className="flex flex-col items-center gap-1">
                                         <div
-                                            className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs font-bold transition-all ${
-                                                done
-                                                    ? "border-[#1A4A7A] bg-[#1A4A7A] text-white"
-                                                    : active
-                                                      ? "border-[#1A4A7A] bg-white text-[#1A4A7A]"
-                                                      : "border-[#D4E8F5] bg-white text-[#C4DDEF]"
-                                            }`}
+                                            className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs font-bold transition-all ${done
+                                                ? "border-[#1A4A7A] bg-[#1A4A7A] text-white"
+                                                : active
+                                                    ? "border-[#1A4A7A] bg-white text-[#1A4A7A]"
+                                                    : "border-[#D4E8F5] bg-white text-[#C4DDEF]"
+                                                }`}
                                         >
                                             {done ? (
                                                 <svg
@@ -192,9 +205,9 @@ export default function Wizard({ onClose }: Props) {
                     </div>
                 </div>
 
-                {/* ── Scrollable content ── */}
+
                 <div className="flex-1 overflow-y-auto p-6">
-                    {step === 1 && <StepOrder onNext={handleOrderNext} />}
+                    {step === 1 && <StepOrder sizes={sizes} fees={fees} onNext={handleOrderNext} />}
                     {step === 2 && orderData && (
                         <StepDelivery
                             orderData={orderData}
@@ -210,8 +223,9 @@ export default function Wizard({ onClose }: Props) {
                             onBack={back}
                         />
                     )}
-                    {step === 4 && orderData && deliveryData && paymentData && (
+                    {step === 4 && orderData && deliveryData && paymentData && orderId && (
                         <StepSuccess
+                            orderId={orderId}
                             orderData={orderData}
                             deliveryData={deliveryData}
                             paymentData={paymentData}
