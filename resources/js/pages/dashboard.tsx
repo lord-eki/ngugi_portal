@@ -1,5 +1,6 @@
 import { Head, router } from "@inertiajs/react";
 import { useState, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import { dashboard } from "@/routes";
 
 interface OrderItem {
@@ -27,10 +28,15 @@ interface RefillerOption {
 interface DeliveryInfo {
     location_mode: string;
     address: string;
+    delivery_code?: string | null;
     contact_name: string | null;
     contact_phone: string | null;
+    contact_email?: string | null;
     recepient_name: string | null;
     recepient_phone: string | null;
+    recepient_email?: string | null;
+    pin_lat?: number | null;
+    pin_lng?: number | null;
     schedule_label: string;
     notes: string | null;
     rider?: { id: number; name: string } | null;
@@ -76,6 +82,7 @@ interface Stats {
     totalSpent: number;
     activeOrders: number;
     deliveredCount: number;
+    netRevenue: number;
 }
 interface Rider {
     id: number;
@@ -222,6 +229,14 @@ function fmtDate(iso: string) {
     });
 }
 
+// First validation message from an Inertia error bag, for toasts
+function firstError(
+    errors: Record<string, string>,
+    fallback = "Something went wrong. Please try again.",
+) {
+    return Object.values(errors)[0] ?? fallback;
+}
+
 //  Sub-components 
 function StatCard({
     label,
@@ -318,6 +333,7 @@ export function OrderCard({
     const [open, setOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [verifyingPayment, setVerifyingPayment] = useState(false);
+    const [resending, setResending] = useState(false);
     const sc = S_STYLE[order.status] ?? S_STYLE.pending;
     const actions = statusActions[order.status] ?? [];
 
@@ -335,6 +351,8 @@ export function OrderCard({
             `/orders/${order.id}/status`,
             { status: next },
             {
+                preserveScroll: true,
+                onError: (e) => toast.error(firstError(e)),
                 onFinish: () => setActionLoading(null),
             },
         );
@@ -350,7 +368,41 @@ export function OrderCard({
             `/orders/${order.id}/verify-payment`,
             {},
             {
+                preserveScroll: true,
+                onError: (e) => toast.error(firstError(e)),
                 onFinish: () => setVerifyingPayment(false),
+            },
+        );
+    };
+
+    const handleResendCode = () => {
+        setResending(true);
+        router.post(
+            `/admin/orders/${order.id}/resend-delivery-code`,
+            {},
+            {
+                preserveScroll: true,
+                onError: (e) =>
+                    toast.error(
+                        firstError(e, "Could not resend the delivery code."),
+                    ),
+                onFinish: () => setResending(false),
+            },
+        );
+    };
+
+    const handleAssign = (
+        kind: "rider" | "refiller",
+        rawValue: string,
+    ) => {
+        const id = rawValue ? Number(rawValue) : null;
+        router.post(
+            `/admin/orders/${order.id}/assign-${kind}`,
+            { [`${kind}_id`]: id },
+            {
+                preserveScroll: true,
+                onError: (e) =>
+                    toast.error(firstError(e, `Could not assign the ${kind}.`)),
             },
         );
     };
@@ -363,11 +415,19 @@ export function OrderCard({
         const d = order.delivery;
 
         if (d.recepient_name) {
-            return { name: d.recepient_name, phone: d.recepient_phone };
+            return {
+                name: d.recepient_name,
+                phone: d.recepient_phone,
+                email: d.recepient_email ?? null,
+            };
         }
 
         if (d.contact_name) {
-            return { name: d.contact_name, phone: d.contact_phone };
+            return {
+                name: d.contact_name,
+                phone: d.contact_phone,
+                email: d.contact_email ?? null,
+            };
         }
 
         return null;
@@ -397,17 +457,18 @@ export function OrderCard({
                             </span>
                             {order.delivery_speed === "instant" && (
                                 <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                     Instant
+                                    ⚡ Instant
                                 </span>
                             )}
                             {order.payment?.status === "pending" && (
                                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                                     Payment unverified
+                                    ⚠ Payment unverified
                                 </span>
                             )}
                         </div>
                         <p className="mt-0.5 text-xs text-[#8AA8C0]">
-                            {fmtDate(order.created_at)} · {timeAgo(order.created_at)}{" "} 
+                            {fmtDate(order.created_at)} ·{" "}
+                            {timeAgo(order.created_at)} · {order.items.length}{" "}
                             item{order.items.length !== 1 ? "s" : ""}
                             {receiver ? ` · ${receiver.name}` : ""}
                             {order.delivery?.address
@@ -501,38 +562,39 @@ export function OrderCard({
                             </div>
                         </div>
 
-                        {order.delivery?.delivery_code &&
-                            order.status === "out_for_delivery" && (
-                                <div className="inline-flex items-center gap-4 justify-between rounded-xl border border-[#D4E8F5] bg-[#F5F8FC] px-3 py-2">
-                                    <div>
-                                        <p className="text-[10px] font-semibold text-[#8AA8C0]">
-                                            Delivery code
-                                        </p>
-                                        <p className="font-mono font-bold tracking-widest text-[#0D2A47]">
-                                            {order.delivery.delivery_code}
-                                        </p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            router.post(
-                                                `/admin/orders/${order.id}/resend-delivery-code`,
-                                                {},
-                                                { preserveScroll: true },
-                                            )
-                                        }
-                                        className="text-xs font-semibold text-[#1A4A7A] hover:underline"
-                                    >
-                                        Resend
-                                    </button>
-                                </div>
-                            )}
-
                         {/* ── Delivery ── */}
                         <div>
                             <SectionLabel>Delivery details</SectionLabel>
                             {order.delivery ? (
                                 <div className="space-y-2">
+                                    {/* Delivery code: compact, lives inside this column */}
+                                    {order.delivery.delivery_code &&
+                                        order.status === "out_for_delivery" && (
+                                            <div className="flex w-fit items-center gap-4 rounded-xl border border-[#D4E8F5] bg-[#F5F8FC] px-3 py-2">
+                                                <div>
+                                                    <p className="text-[10px] font-semibold text-[#8AA8C0]">
+                                                        Delivery code
+                                                    </p>
+                                                    <p className="font-mono text-lg font-bold tracking-widest text-[#0D2A47]">
+                                                        {
+                                                            order.delivery
+                                                                .delivery_code
+                                                        }
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleResendCode}
+                                                    disabled={resending}
+                                                    className="text-xs font-semibold text-[#1A4A7A] hover:underline disabled:opacity-50"
+                                                >
+                                                    {resending
+                                                        ? "Sending…"
+                                                        : "Resend"}
+                                                </button>
+                                            </div>
+                                        )}
+
                                     <div className="rounded-xl border border-[#D4E8F5] bg-[#F5F8FC] p-3">
                                         <p className="mb-1 text-[10px] font-semibold text-[#8AA8C0]">
                                             Delivery address
@@ -540,6 +602,17 @@ export function OrderCard({
                                         <p className="text-sm font-medium text-[#0D2A47]">
                                             {order.delivery.address || "—"}
                                         </p>
+                                        {order.delivery.pin_lat != null &&
+                                            order.delivery.pin_lng != null && (
+                                                <a
+                                                    href={`https://www.google.com/maps?q=${order.delivery.pin_lat},${order.delivery.pin_lng}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="mt-1 inline-block text-xs font-semibold text-[#1A78C2] hover:underline"
+                                                >
+                                                    Open in Maps
+                                                </a>
+                                            )}
                                     </div>
                                     {receiver && (
                                         <div className="rounded-xl border border-[#C4DDEF] bg-[#EEF6FF] p-3">
@@ -548,7 +621,7 @@ export function OrderCard({
                                                     .location_mode ===
                                                 "someone-else"
                                                     ? "Recipient"
-                                                    : " Contact"}
+                                                    : "👤 Contact"}
                                             </p>
                                             <p className="text-sm font-bold text-[#0D2A47]">
                                                 {receiver.name}
@@ -558,8 +631,17 @@ export function OrderCard({
                                                     +{receiver.phone}
                                                 </p>
                                             )}
+                                            {receiver.email && (
+                                                <p className="mt-0.5 text-xs break-all text-[#6A8AA8]">
+                                                    {receiver.email}
+                                                </p>
+                                            )}
                                         </div>
                                     )}
+                                    <InfoRow
+                                        label="Placed"
+                                        value={fmtDate(order.created_at)}
+                                    />
                                     <InfoRow
                                         label="When"
                                         value={order.delivery.schedule_label}
@@ -576,21 +658,17 @@ export function OrderCard({
                                             <p className="mb-1.5 text-[10px] font-semibold text-[#8AA8C0]">
                                                 Assigned rider
                                             </p>
-                                            <select required
+                                            <select
                                                 defaultValue={
                                                     order.delivery.rider?.id ??
                                                     ""
                                                 }
-                                                onChange={(e) => {
-                                                    const riderId = e.target
-                                                        .value
-                                                        ? Number(e.target.value)
-                                                        : null;
-                                                    router.post(
-                                                        `/admin/orders/${order.id}/assign-rider`,
-                                                        { rider_id: riderId },
-                                                    );
-                                                }}
+                                                onChange={(e) =>
+                                                    handleAssign(
+                                                        "rider",
+                                                        e.target.value,
+                                                    )
+                                                }
                                                 className="w-full rounded-lg border border-[#D4E8F5] bg-white px-2 py-1.5 text-sm text-[#0D2A47]"
                                             >
                                                 <option value="">
@@ -613,23 +691,16 @@ export function OrderCard({
                                             <p className="mb-1.5 text-[10px] font-semibold text-[#8AA8C0]">
                                                 💧 Refiller
                                             </p>
-                                            <select required
+                                            <select
                                                 defaultValue={
                                                     order.refiller?.id ?? ""
                                                 }
-                                                onChange={(e) => {
-                                                    const refillerId = e.target
-                                                        .value
-                                                        ? Number(e.target.value)
-                                                        : null;
-                                                    router.post(
-                                                        `/admin/orders/${order.id}/assign-refiller`,
-                                                        {
-                                                            refiller_id:
-                                                                refillerId,
-                                                        },
-                                                    );
-                                                }}
+                                                onChange={(e) =>
+                                                    handleAssign(
+                                                        "refiller",
+                                                        e.target.value,
+                                                    )
+                                                }
                                                 className="w-full rounded-lg border border-[#D4E8F5] bg-white px-2 py-1.5 text-sm text-[#0D2A47]"
                                             >
                                                 <option value="">
@@ -678,7 +749,7 @@ export function OrderCard({
                                     {order.payment.phone && (
                                         <InfoRow
                                             label="Phone"
-                                            value={`+254${order.payment.phone}`}
+                                            value={`+${order.payment.phone}`}
                                         />
                                     )}
                                     {order.payment.transaction_code && (
@@ -746,38 +817,41 @@ export function OrderCard({
                             <p className="mb-3 text-[10px] font-bold tracking-widest text-[#8AA8C0] uppercase">
                                 Admin Actions
                             </p>
-                            {actions.map((action) => {
-                                const needsRider =
-                                    action.next === "out_for_delivery" &&
-                                    !order.delivery?.rider;
+                            <div className="flex flex-wrap gap-2">
+                                {actions.map((action) => {
+                                    const needsRider =
+                                        action.next === "out_for_delivery" &&
+                                        !order.delivery?.rider;
 
-                                return (
-                                    <button
-                                        key={action.next}
-                                        type="button"
-                                        onClick={() =>
-                                            handleStatusChange(action.next)
-                                        }
-                                        disabled={
-                                            actionLoading !== null || needsRider
-                                        }
-                                        title={
-                                            needsRider
-                                                ? "Assign a rider first"
-                                                : undefined
-                                        }
-                                        className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${action.cls}`}
-                                    >
-                                        {actionLoading === action.next
-                                            ? "Updating…"
-                                            : action.label}
-                                    </button>
-                                );
-                            })}
+                                    return (
+                                        <button
+                                            key={action.next}
+                                            type="button"
+                                            onClick={() =>
+                                                handleStatusChange(action.next)
+                                            }
+                                            disabled={
+                                                actionLoading !== null ||
+                                                needsRider
+                                            }
+                                            title={
+                                                needsRider
+                                                    ? "Assign a rider first"
+                                                    : undefined
+                                            }
+                                            className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${action.cls}`}
+                                        >
+                                            {actionLoading === action.next
+                                                ? "Updating…"
+                                                : action.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                             {actions.some(
                                 (a) => a.next === "out_for_delivery",
                             ) &&
-                                !order.delivery?.rider &&  (
+                                !order.delivery?.rider && (
                                     <p className="mt-2 text-[11px] text-[#8AA8C0]">
                                         Assign a rider above before dispatching
                                         this order.
@@ -832,6 +906,8 @@ function SubscriptionsTable({
             `/subscriptions/${sub.id}/${action}`,
             {},
             {
+                preserveScroll: true,
+                onError: (e) => toast.error(firstError(e)),
                 onFinish: () => setActionLoading(null),
             },
         );
@@ -1603,7 +1679,7 @@ export default function Dashboard({
                                         riders={riders}
                                         refillers={refillers}
                                     />
-                                ))}{" "}
+                                ))}
                             </div>
                         ) : (
                             <div className="py-16 text-center text-[#8AA8C0]">

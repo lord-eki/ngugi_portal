@@ -1,46 +1,5 @@
 import { useState, useMemo } from "react";
-import type { OrderData } from "./Wizard";
-
-const BOTTLE_SIZES = [
-    {
-        id: "500ml",
-        label: "500ml",
-        refillPrice: 15,
-        newPrice: 30,
-        hasBundle: true,
-    },
-    { id: "1L", label: "1L", refillPrice: 25, newPrice: 50, hasBundle: true },
-    { id: "5L", label: "5L", refillPrice: 80, newPrice: 150, hasBundle: false },
-    {
-        id: "10L",
-        label: "10L",
-        refillPrice: 120,
-        newPrice: 250,
-        hasBundle: false,
-    },
-    {
-        id: "15L",
-        label: "15L",
-        refillPrice: 160,
-        newPrice: 350,
-        hasBundle: false,
-    },
-    {
-        id: "20L",
-        label: "20L",
-        refillPrice: 200,
-        newPrice: 450,
-        hasBundle: false,
-    },
-];
-
-const BUNDLE_OPTIONS: Record<string, number[]> = {
-    "500ml": [6, 12, 24],
-    "1L": [6, 12],
-};
-
-const DELIVERY_FEE = 150;
-const INSTANT_FEE_ADD = 200;
+import type { OrderData, SizeOption, Fees } from "./Wizard";
 
 type WaterType = "refill" | "new";
 
@@ -53,7 +12,6 @@ interface SizeEntry {
 
 type SizeMap = Record<string, SizeEntry>;
 
-// ── Sub-components ────────────────────────────────────────────────
 function QtyButton({
     onClick,
     children,
@@ -89,8 +47,12 @@ function SectionCard({
 }
 
 export default function StepOrder({
+    sizes,
+    fees,
     onNext,
 }: {
+    sizes: SizeOption[];
+    fees: Fees;
     onNext: (data: OrderData) => void;
 }) {
     const [selectedTypes, setSelectedTypes] = useState<Set<WaterType>>(
@@ -138,7 +100,7 @@ export default function StepOrder({
                 qty: 1,
                 isBundle: false,
                 bundleQty: 1,
-                bundleSize: BUNDLE_OPTIONS[sizeId]?.[0] ?? 0,
+                bundleSize: sizes.find((s) => s.id === sizeId)?.bundleOptions[0] ?? 0,
             };
         }
 
@@ -174,12 +136,12 @@ export default function StepOrder({
 
     const lineTotal = (
         entry: SizeEntry,
-        size: (typeof BOTTLE_SIZES)[0],
+        size: SizeOption,
         type: WaterType,
     ): number => {
         const unitPrice = type === "refill" ? size.refillPrice : size.newPrice;
 
-        if (type === "new" && size.hasBundle && entry.isBundle) {
+        if (type === "new" && (size.hasBundle && size.bundleOptions.length > 0) && entry.isBundle) {
             return entry.bundleSize * entry.bundleQty * unitPrice;
         }
 
@@ -190,7 +152,7 @@ export default function StepOrder({
         const items: { label: string; amount: number }[] = [];
         let sub = 0;
         const processMap = (map: SizeMap, type: WaterType) => {
-            BOTTLE_SIZES.forEach((size) => {
+            sizes.forEach((size) => {
                 const entry = map[size.id];
 
                 if (!entry) {
@@ -217,9 +179,9 @@ export default function StepOrder({
             processMap(newSizes, "new");
         }
 
-        const delivery = sub > 0 ? DELIVERY_FEE : 0;
+        const delivery = sub > 0 ? fees.deliveryFee : 0;
         const instant =
-            deliverySpeed === "instant" && sub > 0 ? INSTANT_FEE_ADD : 0;
+            deliverySpeed === "instant" && sub > 0 ? fees.instantFee : 0;
 
         if (delivery) {
             items.push({ label: "Delivery fee", amount: delivery });
@@ -230,7 +192,7 @@ export default function StepOrder({
         }
 
         return { grandTotal: sub + delivery + instant, lineItems: items };
-    }, [selectedTypes, refillSizes, newSizes, deliverySpeed]);
+    }, [selectedTypes, refillSizes, newSizes, deliverySpeed, sizes, fees]);
 
     const hasItems = lineItems.some((i) => !i.label.includes("fee"));
 
@@ -251,7 +213,7 @@ export default function StepOrder({
         return (
             <div className="space-y-3">
                 <div className="grid grid-cols-3 gap-2">
-                    {BOTTLE_SIZES.map((size) => {
+                    {sizes.map((size) => {
                         const selected = !!map[size.id];
                         const unitPrice =
                             type === "refill"
@@ -299,9 +261,9 @@ export default function StepOrder({
                 </div>
                 {Object.keys(map).length > 0 && (
                     <div className="space-y-3 pt-1">
-                        {BOTTLE_SIZES.filter((s) => map[s.id]).map((size) => {
+                        {sizes.filter((s) => map[s.id]).map((size) => {
                             const entry = map[size.id];
-                            const canBundle = type === "new" && size.hasBundle;
+                            const canBundle = type === "new" && (size.hasBundle && size.bundleOptions.length > 0);
                             const unitPrice =
                                 type === "refill"
                                     ? size.refillPrice
@@ -351,7 +313,7 @@ export default function StepOrder({
                                                 Pack size
                                             </p>
                                             <div className="mb-2 flex flex-wrap gap-2">
-                                                {BUNDLE_OPTIONS[size.id].map(
+                                                {size.bundleOptions.map(
                                                     (pack) => (
                                                         <button
                                                             key={pack}
@@ -652,13 +614,13 @@ export default function StepOrder({
                                 id: "standard" as const,
                                 label: "Standard",
                                 desc: "Batched · same day or next",
-                                fee: `KES ${DELIVERY_FEE}`,
+                                fee: `KES ${fees.deliveryFee}`,
                             },
                             {
                                 id: "instant" as const,
                                 label: "Instant",
                                 desc: "Your order alone · fastest",
-                                fee: `KES ${DELIVERY_FEE + INSTANT_FEE_ADD}`,
+                                fee: `KES ${fees.deliveryFee + fees.instantFee}`,
                             },
                         ].map((opt) => {
                             const active = deliverySpeed === opt.id;
