@@ -1,32 +1,79 @@
-name: Deploy Laravel to Cpanel
+
+name: Deploy Laravel to Hosting
 
 on:
   push:
     branches:
       - master
 
+concurrency:
+  group: ngugi-portal-production
+  cancel-in-progress: false
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Cpanel
+      - name: Checkout latest code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Package frontend assets
+        run: tar -czf public-build.tar.gz -C public build
+
+      - name: Upload frontend assets
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "public-build.tar.gz"
+          target: "/home/lodekib/domains/bhebha.elinestech.co.ke/ngugi_portal/"
+
+      - name: Deploy application
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{secrets.SSH_HOST}}
-          username: ${{secrets.SSH_USERNAME}}
-          port: ${{secrets.SSH_PORT}}
-          key: ${{secrets.SSH_PRIVATE_KEY}}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
+
             cd /home/lodekib/domains/bhebha.elinestech.co.ke/ngugi_portal
-            
-            git pull origin master
 
-            npm run build
+            echo "Fetching latest code..."
+            git fetch origin master
 
-            php artisan migrate
+            echo "Updating application..."
+            git reset --hard origin/master
 
+            echo "Installing frontend assets..."
+            tar -xzf public-build.tar.gz -C .
+            rm -f public-build.tar.gz
+
+            echo "Running migrations..."
+            php artisan migrate --force
+
+            echo "Clearing application caches..."
             php artisan optimize:clear
+
+            echo "Rebuilding Laravel caches..."
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+
+            echo "Deployment completed successfully!"
