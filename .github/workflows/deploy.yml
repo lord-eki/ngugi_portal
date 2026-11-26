@@ -51,7 +51,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "public-build.tar.gz"
-          target: "/home/lodekib/domains/bhebha.elinestech.co.ke/ngugi_portal/public/"
+          target: "/home/lodekib/domains/bhebha.elinestech.co.ke/ngugi_portal/"
 
       - name: Deploy application
         uses: appleboy/ssh-action@v1.2.0
@@ -71,11 +71,24 @@ jobs:
             echo "Updating application..."
             git reset --hard origin/master
 
+            echo "Checking uploaded frontend archive..."
+            if [ ! -f public-build.tar.gz ]; then
+                echo "ERROR: Frontend archive was not uploaded!"
+                exit 1
+            fi
+
             echo "Installing frontend assets..."
-            tar -xzf public-build.tar.gz -C .
+            tar -xzf public-build.tar.gz -C public/
+
             rm -f public-build.tar.gz
 
-            echo "Running migrations..."
+            echo "Verifying Vite manifest..."
+            if [ ! -f public/build/manifest.json ]; then
+                echo "ERROR: Vite manifest is missing!"
+                exit 1
+            fi
+
+            echo "Running database migrations..."
             php artisan migrate --force
 
             echo "Clearing application caches..."
