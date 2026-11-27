@@ -31,7 +31,12 @@ Route::get('/', function () {
     );
 })->name('home');
 
+Route::post('/mpesa/validate', [MpesaController::class, 'validateURL']);
 Route::post('/mpesa/stk/callback', [MpesaController::class, 'stkCallback']);
+
+Route::post('/mpesa/b2c/result', [MpesaController::class, 'b2cResult']);
+Route::post('/mpesa/b2c/timeout', [MpesaController::class, 'b2cTimeout']);
+
 Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
 Route::get('/checkout/{checkout}/status', [CheckoutController::class, 'status'])->middleware('throttle:120,1')->name('checkout.status');
 

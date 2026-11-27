@@ -19,6 +19,24 @@ class MpesaService
         return Mpesa::generateAccessToken();
     }
 
+    public function registerUrls(): array
+    {
+        $response = Mpesa::c2bregisterURLS(
+            config('mpesa.till_number'),
+            config('mpesa.callbacks.c2b_confirmation_url'),
+            config('mpesa.callbacks.c2b_validation_url'),
+            'C2B'
+        );
+
+        $result = $response->json();
+
+        if ($response->failed()) {
+            Log::error('Mpesa URL registration failed', ['response' => $result]);
+            throw new RuntimeException($result['errorMessage'] ?? 'Unable to register Mpesa URLs');
+        }
+
+        return $result;
+    }
 
 
     public function stkPushForCheckout(Checkout $checkout): void
@@ -27,8 +45,8 @@ class MpesaService
             $checkout->phone,
             (int) $checkout->amount,
             'BH' . $checkout->id,                      
-            config('mpesa.callbacks.mpesa_stk_callback_url'),
-            'CustomerPayBillOnline'
+            config('mpesa.callbacks.callback_url'),
+            Mpesa::TILL
         );
 
         $data = $response->json();
@@ -44,6 +62,15 @@ class MpesaService
         ]);
     }
 
+    public function validateURL(Request $request)
+    {
+        Log::info('M-Pesa Validation:', $request->all());
+
+        return response()->json([
+            'ResultCode' => '0',
+            'ResultDesc' => 'Accepted',
+        ]);
+    }
 
    public function handleStkCallback(Request $request): void
 {
