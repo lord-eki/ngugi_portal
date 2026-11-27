@@ -49,9 +49,11 @@ class RequestWithdrawalAction
 
             $response = Mpesa::b2c(
                 $rider->phone,
-                'Business Payment',
+                'BusinessPayment',
                 $amount,
                 'Delivery earnings - Rider Payout',
+                config('mpesa.callbacks.b2c_result_url'),
+                config('mpesa.callbacks.b2c_timeout_url')
             );
 
             $data = $response->json();

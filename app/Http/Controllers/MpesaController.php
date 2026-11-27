@@ -23,12 +23,6 @@ class MpesaController extends Controller
         return $this->mpesaService->accessToken();
     }
 
-    public function registerUrls()
-    {
-        return $this->mpesaService->registerUrls();
-    }
-
-  
 
     public function stkCallback(Request $request)
     {
@@ -37,10 +31,6 @@ class MpesaController extends Controller
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
     }
 
-    public function validateURL(Request $request)
-    {
-        return $this->mpesaService->validateURL($request);
-    }
 
     public function b2cResult(Request $request, HandleB2CResultAction $action)
     {

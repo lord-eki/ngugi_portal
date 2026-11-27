@@ -19,34 +19,15 @@ class MpesaService
         return Mpesa::generateAccessToken();
     }
 
-    public function registerUrls(): array
-    {
-        $response = Mpesa::c2bregisterURLS(
-            config('mpesa.till_number'),
-            config('mpesa.callbacks.c2b_confirmation_url'),
-            config('mpesa.callbacks.c2b_validation_url'),
-            'C2B'
-        );
-
-        $result = $response->json();
-
-        if ($response->failed()) {
-            Log::error('Mpesa URL registration failed', ['response' => $result]);
-            throw new RuntimeException($result['errorMessage'] ?? 'Unable to register Mpesa URLs');
-        }
-
-        return $result;
-    }
-
 
     public function stkPushForCheckout(Checkout $checkout): void
     {
         $response = Mpesa::stkpush(
             $checkout->phone,
             (int) $checkout->amount,
-            'BH' . $checkout->id,                      
+            'BH' . $checkout->id,
             config('mpesa.callbacks.callback_url'),
-            Mpesa::TILL
+            'CustomerPayBillOnline'
         );
 
         $data = $response->json();
@@ -62,70 +43,64 @@ class MpesaService
         ]);
     }
 
-    public function validateURL(Request $request)
+
+    public function handleStkCallback(Request $request): void
     {
-        Log::info('M-Pesa Validation:', $request->all());
+        Log::info('M-Pesa STK Callback:', $request->all());
 
-        return response()->json([
-            'ResultCode' => '0',
-            'ResultDesc' => 'Accepted',
-        ]);
-    }
+        $cb = $request->input('Body.stkCallback');
 
-   public function handleStkCallback(Request $request): void
-{
-    Log::info('M-Pesa STK Callback:', $request->all());
-
-    $cb = $request->input('Body.stkCallback');
-
-    if (! $cb || empty($cb['CheckoutRequestID'])) {
-        Log::warning('Malformed STK callback payload', $request->all());
-        return;
-    }
-
-    DB::transaction(function () use ($cb) {
-        $checkout = Checkout::where('checkout_request_id', $cb['CheckoutRequestID'])
-            ->lockForUpdate()
-            ->first();
-
-        if (! $checkout || $checkout->status === 'paid') {
-            return;                                   
+        if (! $cb || empty($cb['CheckoutRequestID'])) {
+            Log::warning('Malformed STK callback payload', $request->all());
+            return;
         }
 
-        if ((int) ($cb['ResultCode'] ?? -1) !== 0) {
-            if ($checkout->status === 'pending') {
-                $checkout->update([
-                    'status'         => 'failed',
-                    'failure_reason' => $cb['ResultDesc'] ?? 'The payment was not completed.',
-                ]);
+        DB::transaction(function () use ($cb) {
+            $checkout = Checkout::where('checkout_request_id', $cb['CheckoutRequestID'])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $checkout || $checkout->status === 'paid') {
+                return;
             }
-            return;
-        }
 
-        $meta    = collect($cb['CallbackMetadata']['Item'] ?? [])->pluck('Value', 'Name');
-        $paid    = (int) round((float) $meta->get('Amount', 0));
-        $receipt = $meta->get('MpesaReceiptNumber');
+            if ((int) ($cb['ResultCode'] ?? -1) !== 0) {
+                if ($checkout->status === 'pending') {
+                    $checkout->update([
+                        'status'         => 'failed',
+                        'failure_reason' => $cb['ResultDesc'] ?? 'The payment was not completed.',
+                    ]);
+                }
+                return;
+            }
 
-        if ($paid < $checkout->amount) {
-            Log::critical('STK amount mismatch', [
-                'checkout' => $checkout->id, 'expected' => $checkout->amount, 'paid' => $paid, 'receipt' => $receipt,
-            ]);
+            $meta    = collect($cb['CallbackMetadata']['Item'] ?? [])->pluck('Value', 'Name');
+            $paid    = (int) round((float) $meta->get('Amount', 0));
+            $receipt = $meta->get('MpesaReceiptNumber');
+
+            if ($paid < $checkout->amount) {
+                Log::critical('STK amount mismatch', [
+                    'checkout' => $checkout->id,
+                    'expected' => $checkout->amount,
+                    'paid' => $paid,
+                    'receipt' => $receipt,
+                ]);
+                $checkout->update([
+                    'status'               => 'failed',
+                    'mpesa_receipt_number' => $receipt,
+                    'failure_reason'       => 'The amount received did not match the order total. Please contact support with your M-Pesa message.',
+                ]);
+                return;
+            }
+
+
+            $order = app(CreateOrderFromCheckoutAction::class)->handle($checkout, $receipt, $cb);
+
             $checkout->update([
-                'status'               => 'failed',
+                'status'               => 'paid',
+                'order_id'             => $order->id,
                 'mpesa_receipt_number' => $receipt,
-                'failure_reason'       => 'The amount received did not match the order total. Please contact support with your M-Pesa message.',
             ]);
-            return;
-        }
-
-     
-        $order = app(CreateOrderFromCheckoutAction::class)->handle($checkout, $receipt, $cb);
-
-        $checkout->update([
-            'status'               => 'paid',
-            'order_id'             => $order->id,
-            'mpesa_receipt_number' => $receipt,
-        ]);
-    });
-}
+        });
+    }
 }
